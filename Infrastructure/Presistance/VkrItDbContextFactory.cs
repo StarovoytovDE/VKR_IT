@@ -15,7 +15,8 @@ namespace Infrastructure.Presistance
         public VkrItDbContext CreateDbContext(string[] args)
         {
             // DOTNET_ENVIRONMENT можно выставлять в PowerShell при необходимости
-            var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+            var environment = Environment.GetEnvironmentVariable(
+                                            "DOTNET_ENVIRONMENT") ?? "Production";
 
             // Когда вы запускаете dotnet ef с --startup-project WinForms,
             // конфиги лежат в output WinForms, поэтому базу берём из BaseDirectory.
