@@ -1,17 +1,34 @@
-namespace WinForms
+using Infrastructure;
+using Infrastructure.Persistence;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+namespace WinForms;
+
+internal static class Program
 {
-    internal static class Program
+    [STAThread]
+    private static void Main()
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
-        static void Main()
-        {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
-        }
+        ApplicationConfiguration.Initialize();
+
+        var builder = Host.CreateApplicationBuilder();
+        builder.Configuration
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables();
+
+        builder.Services.AddInfrastructure(builder.Configuration);
+        builder.Services.AddTransient<Form1>();
+
+        using var host = builder.Build();
+        using var scope = host.Services.CreateScope();
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<VkrItDbContext>();
+        _ = dbContext.Database.CanConnect();
+
+        Application.Run(scope.ServiceProvider.GetRequiredService<Form1>());
     }
 }
