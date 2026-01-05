@@ -1,4 +1,5 @@
 ﻿using Infrastructure.Persistence;
+using Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +24,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql => 
                                 npgsql.MigrationsAssembly("Infrastructure"))
                                 .UseSnakeCaseNamingConvention());
+        services.AddTransient<DbSeeder>();
 
         return services;
     }

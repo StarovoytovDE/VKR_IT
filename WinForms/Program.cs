@@ -1,5 +1,6 @@
 using Infrastructure;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Seeding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,7 +10,7 @@ namespace WinForms;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static async Task Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
 
@@ -25,6 +26,41 @@ internal static class Program
 
         using var host = builder.Build();
         using var scope = host.Services.CreateScope();
+
+        //       if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
+        //       {
+        //           var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+        //           await seeder.SeedMinimalAsync();
+        //           Console.WriteLine("Seeding done");
+        //           return;
+        //       }
+
+        if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
+        {
+            var logPath = Path.Combine(AppContext.BaseDirectory, "seed.log");
+
+            try
+            {
+                var cs = builder.Configuration.GetConnectionString("VkrIt");
+
+                File.WriteAllText(logPath,
+                    $"Seed START {DateTimeOffset.Now:O}{Environment.NewLine}" +
+                    $"BaseDir: {AppContext.BaseDirectory}{Environment.NewLine}" +
+                    $"Args: {string.Join(" ", args)}{Environment.NewLine}" +
+                    $"CS: {cs}{Environment.NewLine}");
+
+                var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+                await seeder.SeedMinimalAsync();
+
+                File.AppendAllText(logPath, $"Seed DONE {DateTimeOffset.Now:O}{Environment.NewLine}");
+                return;
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText(logPath, $"Seed FAILED {DateTimeOffset.Now:O}{Environment.NewLine}{ex}{Environment.NewLine}");
+                throw;
+            }
+        }
 
         var dbContext = scope.ServiceProvider.GetRequiredService<VkrItDbContext>();
         _ = dbContext.Database.CanConnect();
