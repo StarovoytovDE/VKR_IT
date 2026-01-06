@@ -13,7 +13,7 @@ public sealed class ParamDefinition
     public string? Description { get; set; }
 
     public ParamDomain? ParamDomain { get; set; }
-    public ICollection<ActionParamRequirement> ActionParamRequirements { get; set; } = new List<ActionParamRequirement>();
-    public ICollection<ObjectParamValue> ObjectParamValues { get; set; } = new List<ObjectParamValue>();
-    public ICollection<RequestParamValue> RequestParamValues { get; set; } = new List<RequestParamValue>();
+    public ICollection<ActionParamRequirement> ActionParamRequirements { get; set; } = [];
+    public ICollection<ObjectParamValue> ObjectParamValues { get; set; } = [];
+    public ICollection<RequestParamValue> RequestParamValues { get; set; } = [];
 }

@@ -155,7 +155,7 @@ public sealed class DbSeeder(VkrItDbContext db)
         var entity = await _db.Objects.FirstOrDefaultAsync(x => x.Uid == uid, ct);
         if (entity is null)
         {
-            entity = new Object
+            entity = new ObjectTable
             {
                 Uid = uid,
                 DispatchName = dispatchName,
@@ -193,7 +193,7 @@ public sealed class DbSeeder(VkrItDbContext db)
         var action = await _db.Actions.FirstOrDefaultAsync(x => x.Code == code, ct);
         if (action is null)
         {
-            action = new Action
+            action = new ActionTable
             {
                 Code = code,
                 Name = name,
