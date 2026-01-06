@@ -2,7 +2,7 @@
 
 namespace Domain.Entities;
 
-public sealed class Object
+public sealed class ObjectTable
 {
     public long ObjectId { get; set; }
     public long ObjectTypeId { get; set; }

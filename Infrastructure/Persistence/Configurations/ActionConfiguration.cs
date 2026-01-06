@@ -1,12 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Action = Domain.Entities.Action;
+using ActionTable = Domain.Entities.ActionTable;
 
 namespace Infrastructure.Persistence.Configurations;
 
-public sealed class ActionConfiguration : IEntityTypeConfiguration<Action>
+public sealed class ActionConfiguration : IEntityTypeConfiguration<ActionTable>
 {
-    public void Configure(EntityTypeBuilder<Action> builder)
+    public void Configure(EntityTypeBuilder<ActionTable> builder)
     {
         builder.ToTable("action");
 

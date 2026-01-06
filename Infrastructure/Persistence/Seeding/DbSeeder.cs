@@ -3,8 +3,8 @@ using System.Text;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Action = Domain.Entities.Action;
-using Object = Domain.Entities.Object;
+using ActionTable = Domain.Entities.ActionTable;
+using ObjectTable = Domain.Entities.ObjectTable;
 
 namespace Infrastructure.Persistence.Seeding;
 
@@ -145,7 +145,7 @@ public sealed class DbSeeder(VkrItDbContext db)
         return (objectType, false);
     }
 
-    private async Task<Object> UpsertObjectAsync(
+    private async Task<ObjectTable> UpsertObjectAsync(
         ObjectType objectType,
         string uid,
         string dispatchName,
@@ -184,7 +184,7 @@ public sealed class DbSeeder(VkrItDbContext db)
         return entity;
     }
 
-    private async Task<(Action Action, bool IsNew)> UpsertActionAsync(
+    private async Task<(ActionTable Action, bool IsNew)> UpsertActionAsync(
         string code,
         string name,
         string description,

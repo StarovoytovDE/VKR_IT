@@ -2,7 +2,7 @@
 
 namespace Domain.Entities;
 
-public sealed class Action
+public sealed class ActionTable
 {
     public long ActionId { get; set; }
     public string Code { get; set; } = string.Empty;

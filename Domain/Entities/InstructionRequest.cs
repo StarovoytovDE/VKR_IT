@@ -13,8 +13,8 @@ public sealed class InstructionRequest
     public string? Comment { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
-    public Object Object { get; set; } = null!;
-    public Action Action { get; set; } = null!;
+    public ObjectTable Object { get; set; } = null!;
+    public ActionTable Action { get; set; } = null!;
     public AppUser CreatedByUser { get; set; } = null!;
     public ICollection<RequestParamValue> RequestParamValues { get; set; } = [];
     public InstructionResult? InstructionResult { get; set; }

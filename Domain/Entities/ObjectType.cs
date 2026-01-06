@@ -8,5 +8,5 @@ public sealed class ObjectType
     public string Name { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
 
-    public ICollection<Object> Objects { get; set; } = new List<Object>();
+    public ICollection<ObjectTable> Objects { get; set; } = new List<ObjectTable>();
 }

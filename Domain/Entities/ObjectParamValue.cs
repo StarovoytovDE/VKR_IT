@@ -15,7 +15,7 @@ public sealed class ObjectParamValue
     public JsonDocument? ValueJson { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public Object Object { get; set; } = null!;
+    public ObjectTable Object { get; set; } = null!;
     public ParamDefinition ParamDefinition { get; set; } = null!;
     public AppUser UpdatedByUser { get; set; } = null!;
 }

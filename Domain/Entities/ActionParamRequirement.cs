@@ -12,6 +12,6 @@ public sealed class ActionParamRequirement
     public JsonDocument? ValidationRule { get; set; }
     public int SortOrder { get; set; }
 
-    public Action Action { get; set; } = null!;
+    public ActionTable Action { get; set; } = null!;
     public ParamDefinition ParamDefinition { get; set; } = null!;
 }

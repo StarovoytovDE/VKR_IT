@@ -1,13 +1,13 @@
 ﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Object = Domain.Entities.Object;
+using ObjectTable = Domain.Entities.ObjectTable;
 
 namespace Infrastructure.Persistence.Configurations;
 
-public sealed class ObjectConfiguration : IEntityTypeConfiguration<Object>
+public sealed class ObjectConfiguration : IEntityTypeConfiguration<ObjectTable>
 {
-    public void Configure(EntityTypeBuilder<Object> builder)
+    public void Configure(EntityTypeBuilder<ObjectTable> builder)
     {
         builder.ToTable("object");
 

@@ -1,7 +1,7 @@
 ﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Action = Domain.Entities.Action;
-using Object = Domain.Entities.Object;
+using ActionTable = Domain.Entities.ActionTable;
+using ObjectTable = Domain.Entities.ObjectTable;
 
 namespace Infrastructure.Persistence;
 
@@ -12,8 +12,8 @@ public sealed class VkrItDbContext(DbContextOptions<VkrItDbContext> options)
     public DbSet<AppRole> AppRoles => Set<AppRole>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<ObjectType> ObjectTypes => Set<ObjectType>();
-    public DbSet<Object> Objects => Set<Object>();
-    public DbSet<Action> Actions => Set<Action>();
+    public DbSet<ObjectTable> Objects => Set<ObjectTable>();
+    public DbSet<ActionTable> Actions => Set<ActionTable>();
     public DbSet<ParamDomain> ParamDomains => Set<ParamDomain>();
     public DbSet<ParamDomainValue> ParamDomainValues => Set<ParamDomainValue>();
     public DbSet<ParamDefinition> ParamDefinitions => Set<ParamDefinition>();
