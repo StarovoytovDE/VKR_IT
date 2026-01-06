@@ -14,7 +14,6 @@ public sealed class VkrItDbContext(DbContextOptions<VkrItDbContext> options)
     public DbSet<ObjectType> ObjectTypes => Set<ObjectType>();
     public DbSet<Object> Objects => Set<Object>();
     public DbSet<Action> Actions => Set<Action>();
-    public DbSet<ActionVersion> ActionVersions => Set<ActionVersion>();
     public DbSet<ParamDomain> ParamDomains => Set<ParamDomain>();
     public DbSet<ParamDomainValue> ParamDomainValues => Set<ParamDomainValue>();
     public DbSet<ParamDefinition> ParamDefinitions => Set<ParamDefinition>();

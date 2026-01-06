@@ -19,7 +19,7 @@ public sealed class ActionParamRequirementConfiguration : IEntityTypeConfigurati
                 "sort_order >= 0");
         });
 
-        builder.HasKey(x => new { x.ActionVersionId, x.ParamDefinitionId })
+        builder.HasKey(x => new { x.ActionId, x.ParamDefinitionId })
             .HasName("pk_action_param_requirement");
 
         builder.Property(x => x.IsRequired)
@@ -38,15 +38,15 @@ public sealed class ActionParamRequirementConfiguration : IEntityTypeConfigurati
             .HasDefaultValue(0)
             .IsRequired();
 
-        builder.HasIndex(x => new { x.ActionVersionId, x.SortOrder })
+        builder.HasIndex(x => new { x.ActionId, x.SortOrder })
             .IsUnique()
             .HasDatabaseName("uq_action_param_requirement_sort_order");
 
-        builder.HasOne(x => x.ActionVersion)
+        builder.HasOne(x => x.Action)
             .WithMany(x => x.ActionParamRequirements)
-            .HasForeignKey(x => x.ActionVersionId)
+            .HasForeignKey(x => x.ActionId)
             .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("fk_action_param_requirement_action_version");
+            .HasConstraintName("fk_action_param_requirement_action");
 
         builder.HasOne(x => x.ParamDefinition)
             .WithMany(x => x.ActionParamRequirements)

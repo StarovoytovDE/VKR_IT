@@ -50,11 +50,11 @@ public sealed class InstructionRequestConfiguration : IEntityTypeConfiguration<I
             .OnDelete(DeleteBehavior.Restrict)
             .HasConstraintName("fk_instruction_request_object");
 
-        builder.HasOne(x => x.ActionVersion)
+        builder.HasOne(x => x.Action)
             .WithMany(x => x.InstructionRequests)
-            .HasForeignKey(x => x.ActionVersionId)
+            .HasForeignKey(x => x.ActionId)
             .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("fk_instruction_request_action_version");
+            .HasConstraintName("fk_instruction_request_action");
 
         builder.HasOne(x => x.CreatedByUser)
             .WithMany(x => x.InstructionRequestsCreated)

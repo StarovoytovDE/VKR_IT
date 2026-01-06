@@ -9,5 +9,6 @@ public sealed class Action
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
 
-    public ICollection<ActionVersion> ActionVersions { get; set; } = new List<ActionVersion>();
+    public ICollection<ActionParamRequirement> ActionParamRequirements { get; set; } = [];
+    public ICollection<InstructionRequest> InstructionRequests { get; set; } = [];
 }

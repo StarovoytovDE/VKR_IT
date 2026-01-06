@@ -31,13 +31,11 @@ public sealed class DbSeeder(VkrItDbContext db)
         var (lineType, _) = await UpsertObjectTypeAsync("LINE_500", "ВЛ 500 кВ", ct);
         await UpsertObjectAsync(lineType, "VL500_001", "ВЛ 500 кВ №1", true, ct);
 
-        var (action, isActionNew) = await UpsertActionAsync(
+        await UpsertActionAsync(
             "FORM_INSTRUCTION",
             "Сформировать указание",
             "Тестовое действие для проверки пайплайна",
             ct);
-
-        await UpsertActionVersionAsync(action, isActionNew, "v1", true, DateTimeOffset.UtcNow, ct);
 
         await _db.SaveChangesAsync(ct);
     }
@@ -218,54 +216,7 @@ public sealed class DbSeeder(VkrItDbContext db)
         return (action, false);
     }
 
-    private async Task UpsertActionVersionAsync(
-        Action action,
-        bool isActionNew,
-        string versionLabel,
-        bool isActive,
-        DateTimeOffset releasedAt,
-        CancellationToken ct)
-    {
-        if (isActionNew)
-        {
-            _db.ActionVersions.Add(new ActionVersion
-            {
-                Action = action,
-                VersionLabel = versionLabel,
-                IsActive = isActive,
-                ReleasedAt = releasedAt
-            });
-            return;
-        }
-
-        var version = await _db.ActionVersions.FirstOrDefaultAsync(
-            x => x.ActionId == action.ActionId && x.VersionLabel == versionLabel,
-            ct);
-
-        if (version is null)
-        {
-            _db.ActionVersions.Add(new ActionVersion
-            {
-                Action = action,
-                VersionLabel = versionLabel,
-                IsActive = isActive,
-                ReleasedAt = releasedAt
-            });
-            return;
-        }
-
-        if (version.IsActive != isActive)
-        {
-            version.IsActive = isActive;
-        }
-
-        if (version.ReleasedAt == default)
-        {
-            version.ReleasedAt = releasedAt;
-        }
-    }
-
-    private static string ComputeSha256(string input)
+        private static string ComputeSha256(string input)
     {
         var bytes = Encoding.UTF8.GetBytes(input);
         var hash = SHA256.HashData(bytes);
