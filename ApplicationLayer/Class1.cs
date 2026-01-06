@@ -1,4 +1,4 @@
-﻿namespace Application
+﻿namespace ApplicationLayer
 {
     public class Class1
     {

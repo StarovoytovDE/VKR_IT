@@ -1,0 +1,14 @@
+﻿using System.Collections.Generic;
+
+namespace Domain.Entities;
+
+public sealed class ActionTable
+{
+    public long ActionId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+
+    public ICollection<ActionParamRequirement> ActionParamRequirements { get; set; } = [];
+    public ICollection<InstructionRequest> InstructionRequests { get; set; } = [];
+}
