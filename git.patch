@@ -1,0 +1,954 @@
+diff --git a/ApplicationLayer/InstructionGeneration/Context/InstructionContext.cs b/ApplicationLayer/InstructionGeneration/Context/InstructionContext.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0fecc6f411be24b40b325bcedf1a05280704187a
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Context/InstructionContext.cs
+@@ -0,0 +1,108 @@
++namespace ApplicationLayer.InstructionGeneration.Context;
++
++public sealed class InstructionContext
++{
++    public InstructionContext(
++        string actionCode,
++        bool isFieldClosing,
++        bool isFieldClosingAllowed,
++        bool hasDfz,
++        bool dfzNormalEnabled,
++        bool dfzEnabled,
++        bool connectedToLineCt,
++        bool connectedToLineVt,
++        bool needSwitchVtToReserve,
++        bool bothCbctReverseSide,
++        bool hasDzl,
++        bool dzlNormalEnabled,
++        bool dzlEnabled,
++        bool hasDz,
++        bool dzNormalEnabled,
++        bool dzEnabled,
++        bool needDisableOapv,
++        bool needDisableOapvVl,
++        bool needDisableTapv,
++        bool needDisableTapvInDevice,
++        bool needDisableUpaskReceivers,
++        bool needDisconnectLineCtFromDzo,
++        bool needMtzoShinovkaAtoB,
++        bool needSwitchBusVtToReserve)
++    {
++        ActionCode = actionCode;
++        IsFieldClosing = isFieldClosing;
++        IsFieldClosingAllowed = isFieldClosingAllowed;
++        HasDFZ = hasDfz;
++        DFZNormalEnabled = dfzNormalEnabled;
++        DFZEnabled = dfzEnabled;
++        ConnectedToLineCT = connectedToLineCt;
++        ConnectedToLineVT = connectedToLineVt;
++        NeedSwitchVTToReserve = needSwitchVtToReserve;
++        BothCBCTReverseSide = bothCbctReverseSide;
++        HasDZL = hasDzl;
++        DZLNormalEnabled = dzlNormalEnabled;
++        DZLEnabled = dzlEnabled;
++        HasDZ = hasDz;
++        DZNormalEnabled = dzNormalEnabled;
++        DZEnabled = dzEnabled;
++        NeedDisableOAPV = needDisableOapv;
++        NeedDisableOAPVVL = needDisableOapvVl;
++        NeedDisableTAPV = needDisableTapv;
++        NeedDisableTAPVInDevice = needDisableTapvInDevice;
++        NeedDisableUPASKReceivers = needDisableUpaskReceivers;
++        NeedDisconnectLineCTFromDZO = needDisconnectLineCtFromDzo;
++        NeedMTZOshinovkaAtoB = needMtzoShinovkaAtoB;
++        NeedSwitchBusVTToReserve = needSwitchBusVtToReserve;
++    }
++
++    public string ActionCode { get; }
++    public bool IsFieldClosing { get; }
++    public bool IsFieldClosingAllowed { get; }
++    public bool HasDFZ { get; }
++    public bool DFZNormalEnabled { get; }
++    public bool DFZEnabled { get; }
++    public bool ConnectedToLineCT { get; }
++    public bool ConnectedToLineVT { get; }
++    public bool NeedSwitchVTToReserve { get; }
++    public bool BothCBCTReverseSide { get; }
++    public bool HasDZL { get; }
++    public bool DZLNormalEnabled { get; }
++    public bool DZLEnabled { get; }
++    public bool HasDZ { get; }
++    public bool DZNormalEnabled { get; }
++    public bool DZEnabled { get; }
++    public bool NeedDisableOAPV { get; }
++    public bool NeedDisableOAPVVL { get; }
++    public bool NeedDisableTAPV { get; }
++    public bool NeedDisableTAPVInDevice { get; }
++    public bool NeedDisableUPASKReceivers { get; }
++    public bool NeedDisconnectLineCTFromDZO { get; }
++    public bool NeedMTZOshinovkaAtoB { get; }
++    public bool NeedSwitchBusVTToReserve { get; }
++
++    public static InstructionContext CreateSample() =>
++        new InstructionContext(
++            actionCode: "VL_OUT",
++            isFieldClosing: true,
++            isFieldClosingAllowed: true,
++            hasDfz: true,
++            dfzNormalEnabled: true,
++            dfzEnabled: true,
++            connectedToLineCt: true,
++            connectedToLineVt: true,
++            needSwitchVtToReserve: true,
++            bothCbctReverseSide: false,
++            hasDzl: true,
++            dzlNormalEnabled: true,
++            dzlEnabled: true,
++            hasDz: true,
++            dzNormalEnabled: true,
++            dzEnabled: true,
++            needDisableOapv: false,
++            needDisableOapvVl: false,
++            needDisableTapv: false,
++            needDisableTapvInDevice: false,
++            needDisableUpaskReceivers: false,
++            needDisconnectLineCtFromDzo: false,
++            needMtzoShinovkaAtoB: false,
++            needSwitchBusVtToReserve: false);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs b/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..271551804e85765e30dd316968c80685b42a7331
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs
+@@ -0,0 +1,9 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Generation;
++
++public interface IInstructionGenerator
++{
++    InstructionResultDto Generate(InstructionContext ctx);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Generation/VLOutFieldClosingInstructionGenerator.cs b/ApplicationLayer/InstructionGeneration/Generation/VLOutFieldClosingInstructionGenerator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..07bb564387f8b5b3b20cd4d6e543ee42b6885b4e
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Generation/VLOutFieldClosingInstructionGenerator.cs
+@@ -0,0 +1,33 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Registry;
++
++namespace ApplicationLayer.InstructionGeneration.Generation;
++
++public sealed class VLOutFieldClosingInstructionGenerator : IInstructionGenerator
++{
++    private readonly VLOutFieldClosingInstructionSet _instructionSet = new();
++
++    public InstructionResultDto Generate(InstructionContext ctx)
++    {
++        if (!ctx.IsFieldClosingAllowed)
++        {
++            var warningItem = new InstructionItem(
++                InstructionCodes.FieldClosingNotAllowed,
++                "Замыкание поля недопустимо",
++                "Замыкание поля недопустимо. Генерация дальнейших операций прекращена.",
++                0,
++                InstructionItemType.Warning);
++
++            return new InstructionResultDto(new List<InstructionItem> { warningItem });
++        }
++
++        var items = new List<InstructionItem>();
++        foreach (var operation in _instructionSet.Operations)
++        {
++            items.AddRange(operation.Build(ctx));
++        }
++
++        return new InstructionResultDto(items.OrderBy(item => item.Order).ToList());
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c96c1948018f4da53ab5ce8ed92b858cb5816118
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs
+@@ -0,0 +1,31 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++public static class InstructionCodes
++{
++    public const string FieldClosingNotAllowed = "FIELD_CLOSING_NOT_ALLOWED";
++
++    public const string DfzHasFunction = "DFZ_HAS_FUNCTION";
++    public const string DfzNormalEnabled = "DFZ_NORMAL_ENABLED";
++    public const string DfzEnabled = "DFZ_ENABLED";
++    public const string DfzConnectedToLineCt = "DFZ_CONNECTED_TO_LINE_CT";
++    public const string DfzConnectedToLineVt = "DFZ_CONNECTED_TO_LINE_VT";
++    public const string DfzSwitchVtToReserve = "DFZ_SWITCH_VT_TO_RESERVE";
++
++    public const string DzlHasFunction = "DZL_HAS_FUNCTION";
++    public const string DzlNormalEnabled = "DZL_NORMAL_ENABLED";
++    public const string DzlEnabled = "DZL_ENABLED";
++
++    public const string DzHasFunction = "DZ_HAS_FUNCTION";
++    public const string DzNormalEnabled = "DZ_NORMAL_ENABLED";
++    public const string DzEnabled = "DZ_ENABLED";
++    public const string DzConnectedToLineVt = "DZ_CONNECTED_TO_LINE_VT";
++    public const string DzSwitchVtToReserve = "DZ_SWITCH_VT_TO_RESERVE";
++
++    public const string OapvDisable = "OAPV_DISABLE";
++    public const string TapvDisable = "TAPV_DISABLE";
++    public const string UpaskReceiversDisable = "UPASK_RECEIVERS_DISABLE";
++    public const string SwitchLineVtToReserve = "SWITCH_LINE_VT_TO_RESERVE";
++    public const string DisconnectLineCtFromDzo = "DISCONNECT_LINE_CT_FROM_DZO";
++    public const string MtzoShinovkaAtoB = "MTZO_SHINOVKA_A_TO_B";
++    public const string SwitchBusVtToReserve = "SWITCH_BUS_VT_TO_RESERVE";
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee9618b3fa1201ba2e22f81eaea0b95c905f77b3
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs
+@@ -0,0 +1,19 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++public sealed class InstructionItem
++{
++    public InstructionItem(string code, string title, string text, int order, InstructionItemType type = InstructionItemType.Info)
++    {
++        Code = code;
++        Title = title;
++        Text = text;
++        Order = order;
++        Type = type;
++    }
++
++    public string Code { get; }
++    public string Title { get; }
++    public string Text { get; }
++    public int Order { get; }
++    public InstructionItemType Type { get; }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..04c9fa1d9efa2b2783b22e04a11578057e36b547
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs
+@@ -0,0 +1,8 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++public enum InstructionItemType
++{
++    Info = 0,
++    Warning = 1,
++    Error = 2
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionResultDto.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionResultDto.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..171ffa5cc2b1b7ff45801bb96efc260740ed87b4
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionResultDto.cs
+@@ -0,0 +1,11 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++public sealed class InstructionResultDto
++{
++    public InstructionResultDto(IReadOnlyList<InstructionItem> items)
++    {
++        Items = items;
++    }
++
++    public IReadOnlyList<InstructionItem> Items { get; }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DfzOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DfzOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..a59602137d6809aa962ea0b1fa31f5fb33e995b9
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DfzOperation.cs
+@@ -0,0 +1,85 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class DfzOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _hasDfz =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.HasDFZ);
++
++    private readonly ISpecification<InstructionContext> _dfzNormalEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DFZNormalEnabled);
++
++    private readonly ISpecification<InstructionContext> _dfzEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DFZEnabled);
++
++    private readonly ISpecification<InstructionContext> _connectedToLineCt =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.ConnectedToLineCT);
++
++    private readonly ISpecification<InstructionContext> _connectedToLineVt =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.ConnectedToLineVT);
++
++    private readonly ISpecification<InstructionContext> _needSwitchVtToReserve =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedSwitchVTToReserve);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        const int baseOrder = 100;
++
++        if (_hasDfz.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzHasFunction,
++                "Вывод ДФЗ",
++                "В устройстве есть функция ДФЗ?",
++                baseOrder);
++        }
++
++        if (_dfzNormalEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzNormalEnabled,
++                "Вывод ДФЗ",
++                "Функция нормально введена?",
++                baseOrder + 1);
++        }
++
++        if (_dfzEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzEnabled,
++                "Вывод ДФЗ",
++                "Функция введена?",
++                baseOrder + 2);
++        }
++
++        if (_connectedToLineCt.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzConnectedToLineCt,
++                "Вывод ДФЗ",
++                "Устройство подключено к линейному ТТ?",
++                baseOrder + 3);
++        }
++
++        if (_connectedToLineVt.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzConnectedToLineVt,
++                "Вывод ДФЗ",
++                "Устройство подключено к линейному ТН?",
++                baseOrder + 4);
++        }
++
++        if (_needSwitchVtToReserve.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DfzSwitchVtToReserve,
++                "Вывод ДФЗ",
++                "Производится перевод цепей напряжения на резервный ТН?",
++                baseOrder + 5);
++        }
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..36c7f4e698dd96b4213fcf5df2f8ab877e0f2fdf
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class DisconnectLineCtFromDzoOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needDisconnectLineCtFromDzo =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedDisconnectLineCTFromDZO);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needDisconnectLineCtFromDzo.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.DisconnectLineCtFromDzo,
++            "Отключение цепей ТТ",
++            "Токовые цепи линейного ТТ отключить от ДЗО.",
++            800);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..153bdde3778b339886b5dd6a3d4c0654d11cda8f
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzOperation.cs
+@@ -0,0 +1,73 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class DzOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _hasDz =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.HasDZ);
++
++    private readonly ISpecification<InstructionContext> _dzNormalEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DZNormalEnabled);
++
++    private readonly ISpecification<InstructionContext> _dzEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DZEnabled);
++
++    private readonly ISpecification<InstructionContext> _connectedToLineVt =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.ConnectedToLineVT);
++
++    private readonly ISpecification<InstructionContext> _needSwitchVtToReserve =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedSwitchVTToReserve);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        const int baseOrder = 300;
++
++        if (_hasDz.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzHasFunction,
++                "Вывод ДЗ",
++                "В устройстве есть функция ДЗ?",
++                baseOrder);
++        }
++
++        if (_dzNormalEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzNormalEnabled,
++                "Вывод ДЗ",
++                "Функция нормально введена?",
++                baseOrder + 1);
++        }
++
++        if (_dzEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzEnabled,
++                "Вывод ДЗ",
++                "Функция введена?",
++                baseOrder + 2);
++        }
++
++        if (_connectedToLineVt.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzConnectedToLineVt,
++                "Вывод ДЗ",
++                "Устройство подключено к линейному ТН?",
++                baseOrder + 3);
++        }
++
++        if (_needSwitchVtToReserve.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzSwitchVtToReserve,
++                "Вывод ДЗ",
++                "Производится перевод цепей напряжения на резервный ТН?",
++                baseOrder + 4);
++        }
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzlOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzlOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f30fe600fc5398d950e8775e51d74f10d5d7068d
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzlOperation.cs
+@@ -0,0 +1,49 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class DzlOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _hasDzl =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.HasDZL);
++
++    private readonly ISpecification<InstructionContext> _dzlNormalEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DZLNormalEnabled);
++
++    private readonly ISpecification<InstructionContext> _dzlEnabled =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.DZLEnabled);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        const int baseOrder = 200;
++
++        if (_hasDzl.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzlHasFunction,
++                "Вывод ДЗЛ",
++                "В устройстве есть функция ДЗЛ?",
++                baseOrder);
++        }
++
++        if (_dzlNormalEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzlNormalEnabled,
++                "Вывод ДЗЛ",
++                "Функция нормально введена?",
++                baseOrder + 1);
++        }
++
++        if (_dzlEnabled.IsSatisfiedBy(ctx))
++        {
++            yield return new InstructionItem(
++                InstructionCodes.DzlEnabled,
++                "Вывод ДЗЛ",
++                "Функция введена?",
++                baseOrder + 2);
++        }
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..282c4b83c95148898541f082f91d33664ad7248f
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs
+@@ -0,0 +1,9 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public interface IOperation
++{
++    IEnumerable<InstructionItem> Build(InstructionContext ctx);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..fce796fdbf063944366dfbf015ec1d722ec920d2
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class MtzoShinovkaAtoBOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needMtzoShinovkaAtoB =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedMTZOshinovkaAtoB);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needMtzoShinovkaAtoB.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.MtzoShinovkaAtoB,
++            "МТЗ ошиновки А->B",
++            "При выполнении работ на ошиновке А необходимо произвести перевод цепей МТЗ ошиновки А на ошиновку B согласно схеме и оперативным указаниям.",
++            900);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/OapvOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/OapvOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e76aff43c6f8ce0e7e395f44ad4e6aa6fa37650b
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/OapvOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class OapvOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needDisableOapv =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedDisableOAPV);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needDisableOapv.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.OapvDisable,
++            "Вывод ОАПВ",
++            "Производится вывод ОАПВ?",
++            400);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..1fd9c5b3cae63120201e801749c983038c4b6fb7
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class SwitchBusVtToReserveOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needSwitchBusVtToReserve =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedSwitchBusVTToReserve);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needSwitchBusVtToReserve.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.SwitchBusVtToReserve,
++            "Перевод шинного ТН",
++            "Произвести перевод цепей напряжения шинного ТН на резервный.",
++            1000);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..35006b7bd8b3d8ba778819aef2ed3416d7fdd3f9
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class SwitchLineVtToReserveOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needSwitchVtToReserve =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedSwitchVTToReserve);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needSwitchVtToReserve.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.SwitchLineVtToReserve,
++            "Перевод цепей напряжения линейного ТН",
++            "Произвести перевод цепей напряжения устройств РЗ и СА линии на резервный ТН.",
++            700);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/TapvOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/TapvOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..06fbe14a6064fa4b2d01e5a7edce1e8374eda5b2
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/TapvOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class TapvOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needDisableTapv =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedDisableTAPV);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needDisableTapv.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.TapvDisable,
++            "Вывод ТАПВ",
++            "Вывести ТАПВ выключателей ВЛ в данном устройстве?",
++            500);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/UpaskOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/UpaskOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..017b1e00b29e14762d0a3779a9e5c4138a9a49de
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/UpaskOperation.cs
+@@ -0,0 +1,25 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Specifications;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++public sealed class UpaskOperation : IOperation
++{
++    private readonly ISpecification<InstructionContext> _needDisableUpask =
++        new PredicateSpecification<InstructionContext>(ctx => ctx.NeedDisableUPASKReceivers);
++
++    public IEnumerable<InstructionItem> Build(InstructionContext ctx)
++    {
++        if (!_needDisableUpask.IsSatisfiedBy(ctx))
++        {
++            yield break;
++        }
++
++        yield return new InstructionItem(
++            InstructionCodes.UpaskReceiversDisable,
++            "УПАСК",
++            "Вывести приёмники УПАСК в устройствах РЗА линии?",
++            600);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Registry/VLOutFieldClosingInstructionSet.cs b/ApplicationLayer/InstructionGeneration/Registry/VLOutFieldClosingInstructionSet.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..cb3db1e4193aaf80d974b9be810fb9aee096f39e
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Registry/VLOutFieldClosingInstructionSet.cs
+@@ -0,0 +1,20 @@
++using ApplicationLayer.InstructionGeneration.Operations;
++
++namespace ApplicationLayer.InstructionGeneration.Registry;
++
++public sealed class VLOutFieldClosingInstructionSet
++{
++    public IReadOnlyList<IOperation> Operations { get; } = new List<IOperation>
++    {
++        new DfzOperation(),
++        new DzlOperation(),
++        new DzOperation(),
++        new OapvOperation(),
++        new TapvOperation(),
++        new UpaskOperation(),
++        new SwitchLineVtToReserveOperation(),
++        new DisconnectLineCtFromDzoOperation(),
++        new MtzoShinovkaAtoBOperation(),
++        new SwitchBusVtToReserveOperation()
++    };
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/AndSpecification.cs b/ApplicationLayer/InstructionGeneration/Specifications/AndSpecification.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0490af1d1aacc2b600d857e12b59a137ebeb0e39
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/AndSpecification.cs
+@@ -0,0 +1,16 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public sealed class AndSpecification<T> : ISpecification<T>
++{
++    private readonly ISpecification<T> _left;
++    private readonly ISpecification<T> _right;
++
++    public AndSpecification(ISpecification<T> left, ISpecification<T> right)
++    {
++        _left = left;
++        _right = right;
++    }
++
++    public bool IsSatisfiedBy(T candidate) =>
++        _left.IsSatisfiedBy(candidate) && _right.IsSatisfiedBy(candidate);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/ISpecification.cs b/ApplicationLayer/InstructionGeneration/Specifications/ISpecification.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..7d87c65926c2cf6d07bd39576edf4b0fa102b095
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/ISpecification.cs
+@@ -0,0 +1,6 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public interface ISpecification<in T>
++{
++    bool IsSatisfiedBy(T candidate);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/NotSpecification.cs b/ApplicationLayer/InstructionGeneration/Specifications/NotSpecification.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..44624c980aa2eef6b58478f0c1f2056b05cce0b6
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/NotSpecification.cs
+@@ -0,0 +1,13 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public sealed class NotSpecification<T> : ISpecification<T>
++{
++    private readonly ISpecification<T> _inner;
++
++    public NotSpecification(ISpecification<T> inner)
++    {
++        _inner = inner;
++    }
++
++    public bool IsSatisfiedBy(T candidate) => !_inner.IsSatisfiedBy(candidate);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/OrSpecification.cs b/ApplicationLayer/InstructionGeneration/Specifications/OrSpecification.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..36e04e1252eb3baacbfece1292addd3cdd901b24
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/OrSpecification.cs
+@@ -0,0 +1,16 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public sealed class OrSpecification<T> : ISpecification<T>
++{
++    private readonly ISpecification<T> _left;
++    private readonly ISpecification<T> _right;
++
++    public OrSpecification(ISpecification<T> left, ISpecification<T> right)
++    {
++        _left = left;
++        _right = right;
++    }
++
++    public bool IsSatisfiedBy(T candidate) =>
++        _left.IsSatisfiedBy(candidate) || _right.IsSatisfiedBy(candidate);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/PredicateSpecification.cs b/ApplicationLayer/InstructionGeneration/Specifications/PredicateSpecification.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..b61710b9a32f6c241e23c7a1ed8d4c4327b79a29
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/PredicateSpecification.cs
+@@ -0,0 +1,13 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public sealed class PredicateSpecification<T> : ISpecification<T>
++{
++    private readonly Func<T, bool> _predicate;
++
++    public PredicateSpecification(Func<T, bool> predicate)
++    {
++        _predicate = predicate;
++    }
++
++    public bool IsSatisfiedBy(T candidate) => _predicate(candidate);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Specifications/SpecificationExtensions.cs b/ApplicationLayer/InstructionGeneration/Specifications/SpecificationExtensions.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..101a48253ee11a52d5fb82c8641de6520d4bb86a
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Specifications/SpecificationExtensions.cs
+@@ -0,0 +1,13 @@
++namespace ApplicationLayer.InstructionGeneration.Specifications;
++
++public static class SpecificationExtensions
++{
++    public static ISpecification<T> And<T>(this ISpecification<T> left, ISpecification<T> right) =>
++        new AndSpecification<T>(left, right);
++
++    public static ISpecification<T> Or<T>(this ISpecification<T> left, ISpecification<T> right) =>
++        new OrSpecification<T>(left, right);
++
++    public static ISpecification<T> Not<T>(this ISpecification<T> spec) =>
++        new NotSpecification<T>(spec);
++}
+diff --git a/Tests/InstructionGenerationTests.cs b/Tests/InstructionGenerationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c05c6202830a872b6335f8a746c72b4861506b48
+--- /dev/null
++++ b/Tests/InstructionGenerationTests.cs
+@@ -0,0 +1,90 @@
++using ApplicationLayer.InstructionGeneration.Context;
++using ApplicationLayer.InstructionGeneration.Generation;
++using ApplicationLayer.InstructionGeneration.Models;
++using Xunit;
++
++namespace Tests;
++
++public class InstructionGenerationTests
++{
++    [Fact]
++    public void Generate_WhenFieldClosingNotAllowed_ReturnsOnlyWarning()
++    {
++        var context = new InstructionContext(
++            actionCode: "VL_OUT",
++            isFieldClosing: true,
++            isFieldClosingAllowed: false,
++            hasDfz: true,
++            dfzNormalEnabled: true,
++            dfzEnabled: true,
++            connectedToLineCt: true,
++            connectedToLineVt: true,
++            needSwitchVtToReserve: true,
++            bothCbctReverseSide: true,
++            hasDzl: true,
++            dzlNormalEnabled: true,
++            dzlEnabled: true,
++            hasDz: true,
++            dzNormalEnabled: true,
++            dzEnabled: true,
++            needDisableOapv: true,
++            needDisableOapvVl: true,
++            needDisableTapv: true,
++            needDisableTapvInDevice: true,
++            needDisableUpaskReceivers: true,
++            needDisconnectLineCtFromDzo: true,
++            needMtzoShinovkaAtoB: true,
++            needSwitchBusVtToReserve: true);
++
++        var generator = new VLOutFieldClosingInstructionGenerator();
++
++        var result = generator.Generate(context);
++
++        Assert.Single(result.Items);
++        Assert.Equal(InstructionCodes.FieldClosingNotAllowed, result.Items[0].Code);
++        Assert.Equal(InstructionItemType.Warning, result.Items[0].Type);
++    }
++
++    [Fact]
++    public void Generate_WhenFieldClosingAllowed_IncludesDfzItemsWithoutReverseSide()
++    {
++        var context = new InstructionContext(
++            actionCode: "VL_OUT",
++            isFieldClosing: true,
++            isFieldClosingAllowed: true,
++            hasDfz: true,
++            dfzNormalEnabled: true,
++            dfzEnabled: true,
++            connectedToLineCt: true,
++            connectedToLineVt: true,
++            needSwitchVtToReserve: true,
++            bothCbctReverseSide: true,
++            hasDzl: false,
++            dzlNormalEnabled: false,
++            dzlEnabled: false,
++            hasDz: false,
++            dzNormalEnabled: false,
++            dzEnabled: false,
++            needDisableOapv: false,
++            needDisableOapvVl: false,
++            needDisableTapv: false,
++            needDisableTapvInDevice: false,
++            needDisableUpaskReceivers: false,
++            needDisconnectLineCtFromDzo: false,
++            needMtzoShinovkaAtoB: false,
++            needSwitchBusVtToReserve: false);
++
++        var generator = new VLOutFieldClosingInstructionGenerator();
++
++        var result = generator.Generate(context);
++        var codes = result.Items.Select(item => item.Code).ToList();
++
++        Assert.Contains(InstructionCodes.DfzHasFunction, codes);
++        Assert.Contains(InstructionCodes.DfzNormalEnabled, codes);
++        Assert.Contains(InstructionCodes.DfzEnabled, codes);
++        Assert.Contains(InstructionCodes.DfzConnectedToLineCt, codes);
++        Assert.Contains(InstructionCodes.DfzConnectedToLineVt, codes);
++        Assert.Contains(InstructionCodes.DfzSwitchVtToReserve, codes);
++        Assert.DoesNotContain("BOTH_CB_CT_REVERSE_SIDE", codes);
++    }
++}
+\ No newline at end of file
