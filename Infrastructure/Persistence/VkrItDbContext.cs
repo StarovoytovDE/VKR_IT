@@ -13,6 +13,10 @@ public sealed class VkrItDbContext(DbContextOptions<VkrItDbContext> options)
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<ObjectType> ObjectTypes => Set<ObjectType>();
     public DbSet<ObjectTable> Objects => Set<ObjectTable>();
+    /// <summary>
+    /// Связи линий и устройств РЗА.
+    /// </summary>
+    public DbSet<LineRzaDeviceLink> LineRzaDeviceLinks => Set<LineRzaDeviceLink>();
     public DbSet<ActionTable> Actions => Set<ActionTable>();
     public DbSet<ParamDomain> ParamDomains => Set<ParamDomain>();
     public DbSet<ParamDomainValue> ParamDomainValues => Set<ParamDomainValue>();
