@@ -1,0 +1,2448 @@
+diff --git a/ApplicationLayer/InstructionGeneration/Criteria/ILineCriteriaProvider.cs b/ApplicationLayer/InstructionGeneration/Criteria/ILineCriteriaProvider.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..18a802b20fbcf76435f7aecb1c861ebf71db3091
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Criteria/ILineCriteriaProvider.cs
+@@ -0,0 +1,16 @@
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Criteria;
++
++/// <summary>
++/// Provides line operation criteria from a data source.
++/// </summary>
++public interface ILineCriteriaProvider
++{
++    /// <summary>
++    /// Gets criteria for the specified action code.
++    /// </summary>
++    /// <param name="actionCode">The action code.</param>
++    /// <returns>A collection of line operation criteria.</returns>
++    IEnumerable<LineOperationCriteria> GetCriteria(ActionCode actionCode);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Criteria/InMemoryLineCriteriaProvider.cs b/ApplicationLayer/InstructionGeneration/Criteria/InMemoryLineCriteriaProvider.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..aa8511b7f2fdaad2aa16ac65e5b0c3e5ce7bfab5
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Criteria/InMemoryLineCriteriaProvider.cs
+@@ -0,0 +1,26 @@
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Criteria;
++
++/// <summary>
++/// Provides line operation criteria from an in-memory collection.
++/// </summary>
++public sealed class InMemoryLineCriteriaProvider : ILineCriteriaProvider
++{
++    private readonly IReadOnlyList<LineOperationCriteria> _criteria;
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="InMemoryLineCriteriaProvider"/> class.
++    /// </summary>
++    /// <param name="criteria">The criteria to serve.</param>
++    public InMemoryLineCriteriaProvider(IEnumerable<LineOperationCriteria> criteria)
++    {
++        _criteria = criteria.ToList();
++    }
++
++    /// <inheritdoc />
++    public IEnumerable<LineOperationCriteria> GetCriteria(ActionCode actionCode)
++    {
++        return _criteria.Where(c => c.ActionCode == actionCode);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Criteria/LineOperationCriteria.cs b/ApplicationLayer/InstructionGeneration/Criteria/LineOperationCriteria.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c1b3bbbefc7e5957c1996afe3828c40c866a7520
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Criteria/LineOperationCriteria.cs
+@@ -0,0 +1,159 @@
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Criteria;
++
++/// <summary>
++/// Defines criteria for a single line operation for a specific device and side.
++/// </summary>
++public sealed record LineOperationCriteria
++{
++    /// <summary>
++    /// Initializes a new instance of the <see cref="LineOperationCriteria"/> class.
++    /// </summary>
++    /// <param name="lineCode">The line identifier.</param>
++    /// <param name="side">The side of the line.</param>
++    /// <param name="deviceObjectId">The device object identifier.</param>
++    /// <param name="actionCode">The action code for the operation.</param>
++    public LineOperationCriteria(string lineCode, SideOfLine side, int deviceObjectId, ActionCode actionCode)
++    {
++        LineCode = lineCode;
++        Side = side;
++        DeviceObjectId = deviceObjectId;
++        ActionCode = actionCode;
++    }
++
++    /// <summary>
++    /// Gets the line identifier.
++    /// </summary>
++    public string LineCode { get; init; }
++
++    /// <summary>
++    /// Gets the side of the line.
++    /// </summary>
++    public SideOfLine Side { get; init; }
++
++    /// <summary>
++    /// Gets the device object identifier.
++    /// </summary>
++    public int DeviceObjectId { get; init; }
++
++    /// <summary>
++    /// Gets the optional device name.
++    /// </summary>
++    public string? DeviceName { get; init; }
++
++    /// <summary>
++    /// Gets the action code.
++    /// </summary>
++    public ActionCode ActionCode { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the device has DFZ.
++    /// </summary>
++    public bool HasDFZ { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DFZ is enabled.
++    /// </summary>
++    public bool DFZEnabled { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DFZ is connected to line CT.
++    /// </summary>
++    public bool DFZConnectedToLineCT { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DFZ is connected to line VT.
++    /// </summary>
++    public bool DFZConnectedToLineVT { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether line VT should be switched to reserve.
++    /// </summary>
++    public bool NeedSwitchLineVTToReserve { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether bus VT should be switched to reserve.
++    /// </summary>
++    public bool NeedSwitchBusVTToReserve { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether both CB CTs are on the reverse side of the line.
++    /// </summary>
++    public bool BothCbctReverseSide { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the function is the only one in the device.
++    /// </summary>
++    public bool IsOnlyFunctionInDevice { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the device has DZL.
++    /// </summary>
++    public bool HasDZL { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DZL is enabled.
++    /// </summary>
++    public bool DZLEnabled { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the device has DZ.
++    /// </summary>
++    public bool HasDZ { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DZ is enabled.
++    /// </summary>
++    public bool DZEnabled { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether DZ is connected to line VT.
++    /// </summary>
++    public bool DZConnectedToLineVT { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the device has OAPV.
++    /// </summary>
++    public bool HasOAPV { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether OAPV is enabled.
++    /// </summary>
++    public bool OAPVEnabled { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the device has TAPV.
++    /// </summary>
++    public bool HasTAPV { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether TAPV is enabled.
++    /// </summary>
++    public bool TAPVEnabled { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether UPASK receivers should be disabled.
++    /// </summary>
++    public bool NeedDisableUpaskReceivers { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether line CT should be disconnected from DZO.
++    /// </summary>
++    public bool NeedDisconnectLineCTFromDZO { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether MTZO shinovka A to B is required.
++    /// </summary>
++    public bool NeedMtzoShinovkaAtoB { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether the CT remains energized on this side.
++    /// </summary>
++    public bool CtRemainsEnergizedOnThisSide { get; init; }
++
++    /// <summary>
++    /// Gets a value indicating whether field closing is allowed.
++    /// </summary>
++    public bool IsFieldClosingAllowed { get; init; }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Demo/InstructionDemo.cs b/ApplicationLayer/InstructionGeneration/Demo/InstructionDemo.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..03a1ebddf12730008d17f39d1a291e10476bce93
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Demo/InstructionDemo.cs
+@@ -0,0 +1,57 @@
++using System.Diagnostics;
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Generation;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Demo;
++
++/// <summary>
++/// Provides a demo runner for instruction generation.
++/// </summary>
++public static class InstructionDemo
++{
++    /// <summary>
++    /// Runs the demo with in-memory criteria and writes the output to debug and console.
++    /// </summary>
++    public static void Run()
++    {
++        var criteria = new List<LineOperationCriteria>
++        {
++            new("VL-101", SideOfLine.Begin, 1, ActionCode.VlOutFieldClosing)
++            {
++                DeviceName = "DFZ-Device-1",
++                HasDFZ = true,
++                DFZEnabled = true,
++                DFZConnectedToLineCT = true,
++                DFZConnectedToLineVT = true,
++                NeedSwitchLineVTToReserve = true,
++            },
++            new("VL-101", SideOfLine.Begin, 2, ActionCode.VlOutFieldClosing)
++            {
++                DeviceName = "DZ-Device-2",
++                HasDZ = true,
++                DZEnabled = true,
++                DZConnectedToLineVT = true,
++                NeedSwitchBusVTToReserve = true,
++            },
++            new("VL-101", SideOfLine.End, 3, ActionCode.VlOutNoFieldClosing)
++            {
++                DeviceName = "OAPV-Device-3",
++                HasOAPV = true,
++                OAPVEnabled = true,
++                BothCbctReverseSide = true,
++            }
++        };
++
++        var provider = new InMemoryLineCriteriaProvider(criteria);
++        var generator = new InstructionGenerator(ActionCode.VlOutFieldClosing);
++        var result = generator.Generate(provider.GetCriteria(ActionCode.VlOutFieldClosing));
++
++        foreach (var item in result.Items)
++        {
++            var message = $"[{item.Code}] ({item.Side}) Device={item.DeviceId} -> {item.Text}";
++            Debug.WriteLine(message);
++            Console.WriteLine(message);
++        }
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs b/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..50a6b91b5aa925147312c41928bf0f7a31fcde66
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Generation/IInstructionGenerator.cs
+@@ -0,0 +1,17 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Generation;
++
++/// <summary>
++/// Generates instruction items for a set of device criteria.
++/// </summary>
++public interface IInstructionGenerator
++{
++    /// <summary>
++    /// Generates instruction items for the provided criteria.
++    /// </summary>
++    /// <param name="deviceCriteria">The device criteria to evaluate.</param>
++    /// <returns>The generation result.</returns>
++    InstructionGenerationResult Generate(IEnumerable<LineOperationCriteria> deviceCriteria);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Generation/InstructionGenerator.cs b/ApplicationLayer/InstructionGeneration/Generation/InstructionGenerator.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..35a646f058b087e0a93590378063b77451fc3471
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Generation/InstructionGenerator.cs
+@@ -0,0 +1,114 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++
++namespace ApplicationLayer.InstructionGeneration.Generation;
++
++/// <summary>
++/// Generates instruction items for a specific action code.
++/// </summary>
++public sealed class InstructionGenerator : IInstructionGenerator
++{
++    private readonly ActionCode _actionCode;
++    private readonly IReadOnlyList<IOperation> _operations;
++
++    /// <summary>
++    /// Initializes a new instance of the <see cref="InstructionGenerator"/> class.
++    /// </summary>
++    /// <param name="actionCode">The action code to generate for.</param>
++    public InstructionGenerator(ActionCode actionCode)
++    {
++        _actionCode = actionCode;
++        _operations = BuildOperations(actionCode);
++    }
++
++    /// <summary>
++    /// Gets the action code used by this generator.
++    /// </summary>
++    public ActionCode ActionCode => _actionCode;
++
++    /// <inheritdoc />
++    public InstructionGenerationResult Generate(IEnumerable<LineOperationCriteria> deviceCriteria)
++    {
++        var criteriaList = deviceCriteria
++            .Where(c => c.ActionCode == _actionCode)
++            .ToList();
++
++        var items = new List<InstructionItem>();
++
++        var grouped = criteriaList
++            .GroupBy(c => new { c.Side, c.DeviceObjectId })
++            .OrderBy(g => g.Key.Side)
++            .ThenBy(g => g.Key.DeviceObjectId);
++
++        foreach (var group in grouped)
++        {
++            var criteria = group.First();
++
++            foreach (var operation in _operations)
++            {
++                var decision = operation.Evaluate(criteria);
++
++                if (decision.AddItem && decision.Item is not null)
++                {
++                    items.Add(decision.Item);
++                }
++            }
++        }
++
++        if (items.Any(item => item.Code is InstructionCodes.SwitchLineVtToReserve or InstructionCodes.SwitchBusVtToReserve))
++        {
++            items = items
++                .Where(item => item.Code != InstructionCodes.FollowVoltageSwitchInstructions)
++                .ToList();
++        }
++
++        var orderedItems = items
++            .OrderBy(item => item.Order)
++            .ThenBy(item => item.Side)
++            .ThenBy(item => item.DeviceId)
++            .ToList();
++
++        return new InstructionGenerationResult(orderedItems);
++    }
++
++    private static IReadOnlyList<IOperation> BuildOperations(ActionCode actionCode)
++    {
++        return actionCode switch
++        {
++            ActionCode.VlOutFieldClosing => new IOperation[]
++            {
++                new DfzFieldClosingOperation(),
++                new DzlFieldClosingOperation(),
++                new DzFieldClosingOperation(),
++                new OapvFieldClosingOperation(),
++                new TapvGenericOperation(),
++                new UpaskFieldClosingOperation(),
++                new SwitchLineVtToReserveOperation(),
++                new SwitchBusVtToReserveOperation(),
++                new DisconnectLineCtFromDzoOperation(),
++                new MtzoShinovkaAtoBOperation(),
++            },
++            ActionCode.VlOutNoFieldClosing => new IOperation[]
++            {
++                new MtzoShinovkaAtoBOperation(),
++                new DfzNoFieldClosingOperation(),
++                new DzNoFieldClosingOperation(),
++                new OapvNoFieldClosingOperation(),
++                new TapvNoFieldClosingOperation(),
++            },
++            ActionCode.VlOutLineDisconnectorsOpenBusIsOn => new IOperation[]
++            {
++                new OapvFieldClosingOperation(),
++                new TapvGenericOperation(),
++                new SwitchBusVtToReserveOperation(),
++                new DisconnectLineCtFromDzoOperation(),
++            },
++            ActionCode.VlOutOneSide => new IOperation[]
++            {
++                new DfzOneSideOperation(),
++            },
++            _ => Array.Empty<IOperation>(),
++        };
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/ActionCode.cs b/ApplicationLayer/InstructionGeneration/Models/ActionCode.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..7a99209bfa25e023dc821734584f765094f5917e
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/ActionCode.cs
+@@ -0,0 +1,27 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Describes the action scenario for line operations.
++/// </summary>
++public enum ActionCode
++{
++    /// <summary>
++    /// Output the line with field closing.
++    /// </summary>
++    VlOutFieldClosing,
++
++    /// <summary>
++    /// Output the line without field closing.
++    /// </summary>
++    VlOutNoFieldClosing,
++
++    /// <summary>
++    /// Output the line when line disconnectors are open and bus connection remains.
++    /// </summary>
++    VlOutLineDisconnectorsOpenBusIsOn,
++
++    /// <summary>
++    /// Output the line from one side only.
++    /// </summary>
++    VlOutOneSide
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..b0e3777b46626f4aa63bde551d8872f7e56fb7b9
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionCodes.cs
+@@ -0,0 +1,72 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Contains instruction code constants.
++/// </summary>
++public static class InstructionCodes
++{
++    /// <summary>
++    /// Code for disabling the DFZ function.
++    /// </summary>
++    public const string DfzDisableFunction = "DFZ_DISABLE_FUNCTION";
++
++    /// <summary>
++    /// Code for disabling the DFZ device.
++    /// </summary>
++    public const string DfzDisableDevice = "DFZ_DISABLE_DEVICE";
++
++    /// <summary>
++    /// Code for disabling the DZ function.
++    /// </summary>
++    public const string DzDisableFunction = "DZ_DISABLE_FUNCTION";
++
++    /// <summary>
++    /// Code for disabling the DZ device.
++    /// </summary>
++    public const string DzDisableDevice = "DZ_DISABLE_DEVICE";
++
++    /// <summary>
++    /// Code for disabling the DZL device.
++    /// </summary>
++    public const string DzlDisableDevice = "DZL_DISABLE_DEVICE";
++
++    /// <summary>
++    /// Code for disabling the OAPV function.
++    /// </summary>
++    public const string OapvDisableFunction = "OAPV_DISABLE_FUNCTION";
++
++    /// <summary>
++    /// Code for disabling the TAPV function.
++    /// </summary>
++    public const string TapvDisableFunction = "TAPV_DISABLE_FUNCTION";
++
++    /// <summary>
++    /// Code for disabling UPASK receivers.
++    /// </summary>
++    public const string UpaskDisableReceivers = "UPASK_DISABLE_RECEIVERS";
++
++    /// <summary>
++    /// Code for switching line VT to reserve.
++    /// </summary>
++    public const string SwitchLineVtToReserve = "SWITCH_LINE_VT_TO_RESERVE";
++
++    /// <summary>
++    /// Code for switching bus VT to reserve.
++    /// </summary>
++    public const string SwitchBusVtToReserve = "SWITCH_BUS_VT_TO_RESERVE";
++
++    /// <summary>
++    /// Code for disconnecting line CT from DZO.
++    /// </summary>
++    public const string DisconnectLineCtFromDzo = "DISCONNECT_LINE_CT_FROM_DZO";
++
++    /// <summary>
++    /// Code for switching MTZO settings group.
++    /// </summary>
++    public const string MtzoShinovkaAToB = "MTZO_SHINOVKA_A_TO_B";
++
++    /// <summary>
++    /// Code for following voltage switch instructions.
++    /// </summary>
++    public const string FollowVoltageSwitchInstructions = "FOLLOW_VOLTAGE_SWITCH_INSTRUCTIONS";
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionGenerationResult.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionGenerationResult.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..055a5044642d58b2b1755d4a135976817253f0c5
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionGenerationResult.cs
+@@ -0,0 +1,7 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Contains the generated instruction items.
++/// </summary>
++/// <param name="Items">The ordered list of items.</param>
++public sealed record InstructionGenerationResult(IReadOnlyList<InstructionItem> Items);
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8ef043e0e3d0f4bdf7871237d6943b6bbe77ebf0
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionItem.cs
+@@ -0,0 +1,20 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Represents a single generated instruction item.
++/// </summary>
++/// <param name="Code">The instruction code.</param>
++/// <param name="Title">The short title for display.</param>
++/// <param name="Text">The full instruction text.</param>
++/// <param name="Order">The ordering index for sorting.</param>
++/// <param name="Type">The item type.</param>
++/// <param name="DeviceId">Optional device identifier.</param>
++/// <param name="Side">Optional side of the line.</param>
++public sealed record InstructionItem(
++    string Code,
++    string Title,
++    string Text,
++    int Order,
++    InstructionItemType Type,
++    int? DeviceId,
++    SideOfLine? Side);
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..061077f0f83f93533f2371d9f00b9fbeb828ab6b
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionItemType.cs
+@@ -0,0 +1,22 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Defines the type of an instruction item.
++/// </summary>
++public enum InstructionItemType
++{
++    /// <summary>
++    /// Represents an actionable instruction.
++    /// </summary>
++    Action,
++
++    /// <summary>
++    /// Represents a warning instruction.
++    /// </summary>
++    Warning,
++
++    /// <summary>
++    /// Represents an informational instruction.
++    /// </summary>
++    Info
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionOrder.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionOrder.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0a35bbf012489bec36d994f4ef77228069abf54a
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionOrder.cs
+@@ -0,0 +1,52 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Defines base order values for instruction items.
++/// </summary>
++public static class InstructionOrder
++{
++    /// <summary>
++    /// Base order for MTZO operations.
++    /// </summary>
++    public const int Mtzo = 10;
++
++    /// <summary>
++    /// Base order for DFZ operations.
++    /// </summary>
++    public const int Dfz = 100;
++
++    /// <summary>
++    /// Base order for DZL operations.
++    /// </summary>
++    public const int Dzl = 200;
++
++    /// <summary>
++    /// Base order for DZ operations.
++    /// </summary>
++    public const int Dz = 300;
++
++    /// <summary>
++    /// Base order for OAPV operations.
++    /// </summary>
++    public const int Oapv = 400;
++
++    /// <summary>
++    /// Base order for TAPV operations.
++    /// </summary>
++    public const int Tapv = 500;
++
++    /// <summary>
++    /// Base order for UPASK operations.
++    /// </summary>
++    public const int Upask = 600;
++
++    /// <summary>
++    /// Base order for switching VT operations.
++    /// </summary>
++    public const int SwitchVt = 700;
++
++    /// <summary>
++    /// Base order for disconnecting CT from DZO operations.
++    /// </summary>
++    public const int DisconnectCtDzo = 800;
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/InstructionTexts.cs b/ApplicationLayer/InstructionGeneration/Models/InstructionTexts.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..93f4e70de108799cb5e9ad64550b492240a13d01
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/InstructionTexts.cs
+@@ -0,0 +1,22 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++internal static class InstructionTexts
++{
++    internal const string DisableDfzFunction = "Вывести функцию ДФЗ";
++    internal const string DisableDfzDevice = "Вывести устройство РЗ и СА";
++    internal const string DisableDzlDevice = "Вывести устройство РЗ и СА (ДЗЛ)";
++    internal const string DisableDzFunction = "Вывести функцию ДЗ";
++    internal const string DisableDzDevice = "Вывести устройство РЗ и СА";
++    internal const string DisableOapvFunction = "Вывести функцию ОАПВ";
++    internal const string DisableTapvFunction = "Вывести функцию ТАПВ";
++    internal const string DisableUpaskReceivers = "Вывести цепи приёмников УПАСК ВЧ-каналов ПА";
++    internal const string SwitchLineVtToReserve =
++        "Цепи напряжения устройств РЗ и СА, нормально подключенные к линейному ТН, перевести с линейного ТН на резервный";
++    internal const string SwitchBusVtToReserve =
++        "Цепи напряжения устройства, подключенного к ТН ошиновки, перевести на резервный шинный ТН";
++    internal const string DisconnectLineCtFromDzo = "Токовые цепи линейного ТТ отключить от ДЗО данной ВЛ";
++    internal const string MtzoShinovkaAToB =
++        "После отключения выключателей линии необходимо ввести в работу МТЗ ошиновки – переключить уставки с группы «А» на группу «B»";
++    internal const string FollowVoltageSwitchInstructions =
++        "Сформировать указания по операциям с устройствами РЗ и СА при переводе цепей напряжения";
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/OperationDecision.cs b/ApplicationLayer/InstructionGeneration/Models/OperationDecision.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bd10ad26f0a1dbecae88a47d70fd9e4483735739
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/OperationDecision.cs
+@@ -0,0 +1,20 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Represents the result of a single operation evaluation.
++/// </summary>
++/// <param name="AddItem">Indicates whether an item should be added.</param>
++/// <param name="Item">The generated item, if any.</param>
++/// <param name="StopOperation">Indicates whether the operation should stop.</param>
++/// <param name="IsVoltageSwitchInstruction">Indicates whether the item is a voltage switch instruction.</param>
++public sealed record OperationDecision(
++    bool AddItem,
++    InstructionItem? Item,
++    bool StopOperation = true,
++    bool IsVoltageSwitchInstruction = false)
++{
++    /// <summary>
++    /// Represents an empty decision with no item.
++    /// </summary>
++    public static OperationDecision None => new(false, null, true, false);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Models/SideOfLine.cs b/ApplicationLayer/InstructionGeneration/Models/SideOfLine.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8eb0eca747cc73ac1bbda628cc20b940f8007783
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Models/SideOfLine.cs
+@@ -0,0 +1,17 @@
++namespace ApplicationLayer.InstructionGeneration.Models;
++
++/// <summary>
++/// Represents a side of the line.
++/// </summary>
++public enum SideOfLine
++{
++    /// <summary>
++    /// The beginning side of the line.
++    /// </summary>
++    Begin,
++
++    /// <summary>
++    /// The ending side of the line.
++    /// </summary>
++    End
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DfzFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DfzFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8e70e25f78801da09c42a42c17c6958b98aefb70
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DfzFieldClosingOperation.cs
+@@ -0,0 +1,73 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DFZ when field closing is applied.
++/// </summary>
++public sealed class DfzFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDFZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DFZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DFZConnectedToLineCT)
++        {
++            return criteria.IsOnlyFunctionInDevice
++                ? CreateDeviceDecision(criteria)
++                : CreateFunctionDecision(criteria);
++        }
++
++        if (!criteria.DFZConnectedToLineVT)
++        {
++            return OperationDecision.None;
++        }
++
++        if (criteria.NeedSwitchLineVTToReserve || criteria.NeedSwitchBusVTToReserve)
++        {
++            var item = InstructionItemFactory.Create(
++                criteria,
++                InstructionCodes.FollowVoltageSwitchInstructions,
++                InstructionTexts.FollowVoltageSwitchInstructions,
++                InstructionOrder.SwitchVt);
++
++            return new OperationDecision(true, item, true, false);
++        }
++
++        return criteria.IsOnlyFunctionInDevice
++            ? CreateDeviceDecision(criteria)
++            : CreateFunctionDecision(criteria);
++    }
++
++    private static OperationDecision CreateFunctionDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableFunction,
++            InstructionTexts.DisableDfzFunction,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++
++    private static OperationDecision CreateDeviceDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableDevice,
++            InstructionTexts.DisableDfzDevice,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DfzNoFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DfzNoFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f077b5659cca25dc96d0e4fb617939da231a8fb5
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DfzNoFieldClosingOperation.cs
+@@ -0,0 +1,55 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DFZ without field closing.
++/// </summary>
++public sealed class DfzNoFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDFZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DFZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.BothCbctReverseSide)
++        {
++            return OperationDecision.None;
++        }
++
++        return criteria.IsOnlyFunctionInDevice
++            ? CreateDeviceDecision(criteria)
++            : CreateFunctionDecision(criteria);
++    }
++
++    private static OperationDecision CreateFunctionDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableFunction,
++            InstructionTexts.DisableDfzFunction,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++
++    private static OperationDecision CreateDeviceDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableDevice,
++            InstructionTexts.DisableDfzDevice,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DfzOneSideOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DfzOneSideOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..8812a33d454096b6b2f4324f6b757af111efeea7
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DfzOneSideOperation.cs
+@@ -0,0 +1,55 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DFZ when the line remains energized on one side.
++/// </summary>
++public sealed class DfzOneSideOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDFZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DFZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DFZConnectedToLineCT)
++        {
++            return OperationDecision.None;
++        }
++
++        return criteria.IsOnlyFunctionInDevice
++            ? CreateDeviceDecision(criteria)
++            : CreateFunctionDecision(criteria);
++    }
++
++    private static OperationDecision CreateFunctionDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableFunction,
++            InstructionTexts.DisableDfzFunction,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++
++    private static OperationDecision CreateDeviceDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DfzDisableDevice,
++            InstructionTexts.DisableDfzDevice,
++            InstructionOrder.Dfz);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..87fd44ed1bfe5c1457ce2dffec97a4574e0be4b2
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperation.cs
+@@ -0,0 +1,27 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for disconnecting line CT from DZO.
++/// </summary>
++public sealed class DisconnectLineCtFromDzoOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.NeedDisconnectLineCTFromDZO)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DisconnectLineCtFromDzo,
++            InstructionTexts.DisconnectLineCtFromDzo,
++            InstructionOrder.DisconnectCtDzo);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bba37bdaa8f6b5ccb9cfbe035d370e4239aee8fb
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzFieldClosingOperation.cs
+@@ -0,0 +1,48 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DZ when field closing is applied.
++/// </summary>
++public sealed class DzFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZConnectedToLineVT)
++        {
++            return OperationDecision.None;
++        }
++
++        if (criteria.NeedSwitchLineVTToReserve || criteria.NeedSwitchBusVTToReserve)
++        {
++            var item = InstructionItemFactory.Create(
++                criteria,
++                InstructionCodes.FollowVoltageSwitchInstructions,
++                InstructionTexts.FollowVoltageSwitchInstructions,
++                InstructionOrder.SwitchVt);
++
++            return new OperationDecision(true, item, true, false);
++        }
++
++        var result = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DzDisableFunction,
++            InstructionTexts.DisableDzFunction,
++            InstructionOrder.Dz);
++
++        return new OperationDecision(true, result);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzNoFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzNoFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..da5e55cc863042a66bd659a885d47197dcb72be1
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzNoFieldClosingOperation.cs
+@@ -0,0 +1,37 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DZ without field closing.
++/// </summary>
++public sealed class DzNoFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.BothCbctReverseSide)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DzDisableFunction,
++            InstructionTexts.DisableDzFunction,
++            InstructionOrder.Dz);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzOneSideNoFieldOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzOneSideNoFieldOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..bdd1b0c6ad564fe56e203030387cc8b3e2eee21c
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzOneSideNoFieldOperation.cs
+@@ -0,0 +1,55 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DZ when the line remains energized on one side without field closing.
++/// </summary>
++public sealed class DzOneSideNoFieldOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDZ)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZConnectedToLineVT)
++        {
++            return OperationDecision.None;
++        }
++
++        return criteria.IsOnlyFunctionInDevice
++            ? CreateDeviceDecision(criteria)
++            : CreateFunctionDecision(criteria);
++    }
++
++    private static OperationDecision CreateFunctionDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DzDisableFunction,
++            InstructionTexts.DisableDzFunction,
++            InstructionOrder.Dz);
++
++        return new OperationDecision(true, item);
++    }
++
++    private static OperationDecision CreateDeviceDecision(LineOperationCriteria criteria)
++    {
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DzDisableDevice,
++            InstructionTexts.DisableDzDevice,
++            InstructionOrder.Dz);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/DzlFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/DzlFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..7fe5808c20a4b2a7a1a2a0460d9ff47ab56589a1
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/DzlFieldClosingOperation.cs
+@@ -0,0 +1,32 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for DZL when field closing is applied.
++/// </summary>
++public sealed class DzlFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasDZL)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.DZLEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.DzlDisableDevice,
++            InstructionTexts.DisableDzlDevice,
++            InstructionOrder.Dzl);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d2ae3df9424b0b6693bbf46b86460b7b986cb709
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/IOperation.cs
+@@ -0,0 +1,17 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Represents a decision tree operation.
++/// </summary>
++public interface IOperation
++{
++    /// <summary>
++    /// Evaluates the operation against the given criteria.
++    /// </summary>
++    /// <param name="criteria">The operation criteria.</param>
++    /// <returns>The decision for the operation.</returns>
++    OperationDecision Evaluate(LineOperationCriteria criteria);
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/InstructionItemFactory.cs b/ApplicationLayer/InstructionGeneration/Operations/InstructionItemFactory.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..4c7bea971a009757c2773fa702c26c61e958e396
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/InstructionItemFactory.cs
+@@ -0,0 +1,24 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++internal static class InstructionItemFactory
++{
++    internal static InstructionItem Create(
++        LineOperationCriteria criteria,
++        string code,
++        string text,
++        int order,
++        InstructionItemType type = InstructionItemType.Action)
++    {
++        return new InstructionItem(
++            code,
++            text,
++            text,
++            order,
++            type,
++            criteria.DeviceObjectId,
++            criteria.Side);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f35ac06f23491fc5653105cbd7a98dfc316e12f3
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/MtzoShinovkaAtoBOperation.cs
+@@ -0,0 +1,32 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for MTZO shinovka A to B switching.
++/// </summary>
++public sealed class MtzoShinovkaAtoBOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.NeedMtzoShinovkaAtoB)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.CtRemainsEnergizedOnThisSide)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.MtzoShinovkaAToB,
++            InstructionTexts.MtzoShinovkaAToB,
++            InstructionOrder.Mtzo);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/OapvFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/OapvFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..54ac866480df24fbd55cf83eaf7ca639eee48f0e
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/OapvFieldClosingOperation.cs
+@@ -0,0 +1,32 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for OAPV when field closing is applied.
++/// </summary>
++public sealed class OapvFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasOAPV)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.OAPVEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.OapvDisableFunction,
++            InstructionTexts.DisableOapvFunction,
++            InstructionOrder.Oapv);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/OapvNoFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/OapvNoFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..139d48657ec32e756bd5975dbde7adeb92730574
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/OapvNoFieldClosingOperation.cs
+@@ -0,0 +1,37 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for OAPV without field closing.
++/// </summary>
++public sealed class OapvNoFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasOAPV)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.OAPVEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.BothCbctReverseSide)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.OapvDisableFunction,
++            InstructionTexts.DisableOapvFunction,
++            InstructionOrder.Oapv);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d5cb92ef5756a4e788a2af09827f958f48c429f2
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/SwitchBusVtToReserveOperation.cs
+@@ -0,0 +1,27 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for switching bus VT to reserve.
++/// </summary>
++public sealed class SwitchBusVtToReserveOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.NeedSwitchBusVTToReserve)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.SwitchBusVtToReserve,
++            InstructionTexts.SwitchBusVtToReserve,
++            InstructionOrder.SwitchVt);
++
++        return new OperationDecision(true, item, true, true);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..19d544aa3826f0c662ba0d952c072d071d3375a6
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/SwitchLineVtToReserveOperation.cs
+@@ -0,0 +1,27 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for switching line VT to reserve.
++/// </summary>
++public sealed class SwitchLineVtToReserveOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.NeedSwitchLineVTToReserve)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.SwitchLineVtToReserve,
++            InstructionTexts.SwitchLineVtToReserve,
++            InstructionOrder.SwitchVt);
++
++        return new OperationDecision(true, item, true, true);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/TapvGenericOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/TapvGenericOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..18c68a504d71770778b5137fbd089eb0a7fbd0f5
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/TapvGenericOperation.cs
+@@ -0,0 +1,32 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for TAPV in generic field closing scenarios.
++/// </summary>
++public sealed class TapvGenericOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasTAPV)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.TAPVEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.TapvDisableFunction,
++            InstructionTexts.DisableTapvFunction,
++            InstructionOrder.Tapv);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/TapvNoFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/TapvNoFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f5a3fa3fd5442741a81ed36a1be7c8101bae8bb
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/TapvNoFieldClosingOperation.cs
+@@ -0,0 +1,37 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for TAPV without field closing.
++/// </summary>
++public sealed class TapvNoFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.HasTAPV)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.TAPVEnabled)
++        {
++            return OperationDecision.None;
++        }
++
++        if (!criteria.BothCbctReverseSide)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.TapvDisableFunction,
++            InstructionTexts.DisableTapvFunction,
++            InstructionOrder.Tapv);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/ApplicationLayer/InstructionGeneration/Operations/UpaskFieldClosingOperation.cs b/ApplicationLayer/InstructionGeneration/Operations/UpaskFieldClosingOperation.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..b043f8360de645c18df869738ec52d0d19c6ea12
+--- /dev/null
++++ b/ApplicationLayer/InstructionGeneration/Operations/UpaskFieldClosingOperation.cs
+@@ -0,0 +1,27 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace ApplicationLayer.InstructionGeneration.Operations;
++
++/// <summary>
++/// Decision tree for disabling UPASK receivers when field closing is applied.
++/// </summary>
++public sealed class UpaskFieldClosingOperation : IOperation
++{
++    /// <inheritdoc />
++    public OperationDecision Evaluate(LineOperationCriteria criteria)
++    {
++        if (!criteria.NeedDisableUpaskReceivers)
++        {
++            return OperationDecision.None;
++        }
++
++        var item = InstructionItemFactory.Create(
++            criteria,
++            InstructionCodes.UpaskDisableReceivers,
++            InstructionTexts.DisableUpaskReceivers,
++            InstructionOrder.Upask);
++
++        return new OperationDecision(true, item);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Generation/InstructionGeneratorTests.cs b/Tests/InstructionGeneration/Generation/InstructionGeneratorTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d10ee922dec126e5dc7178c6cf8abc1b6581250e
+--- /dev/null
++++ b/Tests/InstructionGeneration/Generation/InstructionGeneratorTests.cs
+@@ -0,0 +1,89 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Generation;
++using ApplicationLayer.InstructionGeneration.Models;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Generation;
++
++public class InstructionGeneratorTests
++{
++    [Fact]
++    public void Generate_MultipleDevicesAcrossSides_ReturnsOrderedItems()
++    {
++        var criteria = new List<LineOperationCriteria>
++        {
++            new("VL-1", SideOfLine.Begin, 1, ActionCode.VlOutFieldClosing)
++            {
++                HasDFZ = true,
++                DFZEnabled = true,
++                DFZConnectedToLineCT = false,
++                IsOnlyFunctionInDevice = false,
++            },
++            new("VL-1", SideOfLine.Begin, 2, ActionCode.VlOutFieldClosing)
++            {
++                HasDZ = true,
++                DZEnabled = true,
++                DZConnectedToLineVT = true,
++            },
++            new("VL-1", SideOfLine.End, 3, ActionCode.VlOutFieldClosing)
++            {
++                HasOAPV = true,
++                OAPVEnabled = true,
++            },
++        };
++
++        var generator = new InstructionGenerator(ActionCode.VlOutFieldClosing);
++        var result = generator.Generate(criteria);
++
++        Assert.Equal(3, result.Items.Count);
++        Assert.Equal(new[]
++        {
++            InstructionCodes.DfzDisableFunction,
++            InstructionCodes.DzDisableFunction,
++            InstructionCodes.OapvDisableFunction,
++        }, result.Items.Select(item => item.Code));
++    }
++
++    [Fact]
++    public void Generate_BothSwitchFlags_ReturnsTwoSwitchInstructions()
++    {
++        var criteria = new List<LineOperationCriteria>
++        {
++            new("VL-1", SideOfLine.Begin, 1, ActionCode.VlOutFieldClosing)
++            {
++                NeedSwitchLineVTToReserve = true,
++                NeedSwitchBusVTToReserve = true,
++            },
++        };
++
++        var generator = new InstructionGenerator(ActionCode.VlOutFieldClosing);
++        var result = generator.Generate(criteria);
++
++        Assert.Equal(2, result.Items.Count);
++        Assert.Contains(result.Items, item => item.Code == InstructionCodes.SwitchLineVtToReserve);
++        Assert.Contains(result.Items, item => item.Code == InstructionCodes.SwitchBusVtToReserve);
++    }
++
++    [Fact]
++    public void Generate_WhenSpecificSwitchExists_RemovesFollowInstruction()
++    {
++        var criteria = new List<LineOperationCriteria>
++        {
++            new("VL-1", SideOfLine.Begin, 1, ActionCode.VlOutFieldClosing)
++            {
++                HasDFZ = true,
++                DFZEnabled = true,
++                DFZConnectedToLineCT = true,
++                DFZConnectedToLineVT = true,
++                NeedSwitchLineVTToReserve = true,
++            },
++        };
++
++        var generator = new InstructionGenerator(ActionCode.VlOutFieldClosing);
++        var result = generator.Generate(criteria);
++
++        Assert.Single(result.Items);
++        Assert.DoesNotContain(result.Items, item => item.Code == InstructionCodes.FollowVoltageSwitchInstructions);
++        Assert.Contains(result.Items, item => item.Code == InstructionCodes.SwitchLineVtToReserve);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DfzFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/DfzFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..90e1191297e1376d165a7d9dc2d88afc46aeabed
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DfzFieldClosingOperationTests.cs
+@@ -0,0 +1,60 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DfzFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NoDfz_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDFZ = false,
++        };
++
++        var operation = new DfzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++        Assert.Null(decision.Item);
++    }
++
++    [Fact]
++    public void Evaluate_NotConnectedToCtAndNotOnlyFunction_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            DFZConnectedToLineCT = false,
++            IsOnlyFunctionInDevice = false,
++        };
++
++        var operation = new DfzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.True(decision.AddItem);
++        Assert.Equal(InstructionCodes.DfzDisableFunction, decision.Item?.Code);
++    }
++
++    [Fact]
++    public void Evaluate_NeedSwitchVoltage_ReturnsFollowInstructions()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            DFZConnectedToLineCT = true,
++            DFZConnectedToLineVT = true,
++            NeedSwitchLineVTToReserve = true,
++        };
++
++        var operation = new DfzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.True(decision.AddItem);
++        Assert.Equal(InstructionCodes.FollowVoltageSwitchInstructions, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DfzNoFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/DfzNoFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..0f830d04fd22aca2a0afe99ff15bff7acd6c2bb0
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DfzNoFieldClosingOperationTests.cs
+@@ -0,0 +1,58 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DfzNoFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_Disabled_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDFZ = true,
++            DFZEnabled = false,
++        };
++
++        var operation = new DfzNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_ReverseSideAndOnlyFunction_DisablesDevice()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            BothCbctReverseSide = true,
++            IsOnlyFunctionInDevice = true,
++        };
++
++        var operation = new DfzNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.True(decision.AddItem);
++        Assert.Equal(InstructionCodes.DfzDisableDevice, decision.Item?.Code);
++    }
++
++    [Fact]
++    public void Evaluate_ReverseSideAndNotOnlyFunction_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            BothCbctReverseSide = true,
++            IsOnlyFunctionInDevice = false,
++        };
++
++        var operation = new DfzNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DfzDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DfzOneSideOperationTests.cs b/Tests/InstructionGeneration/Operations/DfzOneSideOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..ee63868c5f0c9a5a0e01a4952d24fc88a7fadad3
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DfzOneSideOperationTests.cs
+@@ -0,0 +1,58 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DfzOneSideOperationTests
++{
++    [Fact]
++    public void Evaluate_NoConnectionToCt_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutOneSide) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            DFZConnectedToLineCT = false,
++        };
++
++        var operation = new DfzOneSideOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_OnlyFunction_DisablesDevice()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutOneSide) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            DFZConnectedToLineCT = true,
++            IsOnlyFunctionInDevice = true,
++        };
++
++        var operation = new DfzOneSideOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DfzDisableDevice, decision.Item?.Code);
++    }
++
++    [Fact]
++    public void Evaluate_NotOnlyFunction_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutOneSide) with
++        {
++            HasDFZ = true,
++            DFZEnabled = true,
++            DFZConnectedToLineCT = true,
++            IsOnlyFunctionInDevice = false,
++        };
++
++        var operation = new DfzOneSideOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DfzDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperationTests.cs b/Tests/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..3fbcd6eb0f636648307798922fc07f5f7276777c
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DisconnectLineCtFromDzoOperationTests.cs
+@@ -0,0 +1,36 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DisconnectLineCtFromDzoOperationTests
++{
++    [Fact]
++    public void Evaluate_NotRequired_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedDisconnectLineCTFromDZO = false,
++        };
++
++        var operation = new DisconnectLineCtFromDzoOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Required_ReturnsInstruction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedDisconnectLineCTFromDZO = true,
++        };
++
++        var operation = new DisconnectLineCtFromDzoOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DisconnectLineCtFromDzo, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DzFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/DzFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..da445fbc6d057bb05dfd5985354dcba1fcb0a0fb
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DzFieldClosingOperationTests.cs
+@@ -0,0 +1,56 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DzFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NoDz_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDZ = false,
++        };
++
++        var operation = new DzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_SwitchNeeded_ReturnsFollowInstructions()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            DZConnectedToLineVT = true,
++            NeedSwitchBusVTToReserve = true,
++        };
++
++        var operation = new DzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.True(decision.AddItem);
++        Assert.Equal(InstructionCodes.FollowVoltageSwitchInstructions, decision.Item?.Code);
++    }
++
++    [Fact]
++    public void Evaluate_Enabled_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            DZConnectedToLineVT = true,
++        };
++
++        var operation = new DzFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DzDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DzNoFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/DzNoFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..62c8ff7662af6cad985f271ce4b9b92fa77acba6
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DzNoFieldClosingOperationTests.cs
+@@ -0,0 +1,40 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DzNoFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NotReverseSide_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            BothCbctReverseSide = false,
++        };
++
++        var operation = new DzNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_ReverseSide_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            BothCbctReverseSide = true,
++        };
++
++        var operation = new DzNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DzDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DzOneSideNoFieldOperationTests.cs b/Tests/InstructionGeneration/Operations/DzOneSideNoFieldOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..c65b7326bb1598bad5b3d18b0a5e23d9f5bff976
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DzOneSideNoFieldOperationTests.cs
+@@ -0,0 +1,58 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DzOneSideNoFieldOperationTests
++{
++    [Fact]
++    public void Evaluate_NoLineVt_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            DZConnectedToLineVT = false,
++        };
++
++        var operation = new DzOneSideNoFieldOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_OnlyFunction_DisablesDevice()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            DZConnectedToLineVT = true,
++            IsOnlyFunctionInDevice = true,
++        };
++
++        var operation = new DzOneSideNoFieldOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DzDisableDevice, decision.Item?.Code);
++    }
++
++    [Fact]
++    public void Evaluate_NotOnlyFunction_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasDZ = true,
++            DZEnabled = true,
++            DZConnectedToLineVT = true,
++            IsOnlyFunctionInDevice = false,
++        };
++
++        var operation = new DzOneSideNoFieldOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.DzDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/DzlFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/DzlFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..9ec21d16221d1d5431eb42e0184120ac6b0e4802
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/DzlFieldClosingOperationTests.cs
+@@ -0,0 +1,38 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class DzlFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NoDzl_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDZL = false,
++        };
++
++        var operation = new DzlFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Enabled_DisablesDevice()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasDZL = true,
++            DZLEnabled = true,
++        };
++
++        var operation = new DzlFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.True(decision.AddItem);
++        Assert.Equal(InstructionCodes.DzlDisableDevice, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/MtzoShinovkaAtoBOperationTests.cs b/Tests/InstructionGeneration/Operations/MtzoShinovkaAtoBOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..4a17100875d2883fcb619b6e88122e106fb1b0d0
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/MtzoShinovkaAtoBOperationTests.cs
+@@ -0,0 +1,52 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class MtzoShinovkaAtoBOperationTests
++{
++    [Fact]
++    public void Evaluate_NotRequired_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedMtzoShinovkaAtoB = false,
++        };
++
++        var operation = new MtzoShinovkaAtoBOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_CtNotEnergized_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedMtzoShinovkaAtoB = true,
++            CtRemainsEnergizedOnThisSide = false,
++        };
++
++        var operation = new MtzoShinovkaAtoBOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_RequiredAndEnergized_ReturnsInstruction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedMtzoShinovkaAtoB = true,
++            CtRemainsEnergizedOnThisSide = true,
++        };
++
++        var operation = new MtzoShinovkaAtoBOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.MtzoShinovkaAToB, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/OapvFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/OapvFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..2909cab0da118977f7a6140c44009467b06d384f
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/OapvFieldClosingOperationTests.cs
+@@ -0,0 +1,37 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class OapvFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NoOapv_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasOAPV = false,
++        };
++
++        var operation = new OapvFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Enabled_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasOAPV = true,
++            OAPVEnabled = true,
++        };
++
++        var operation = new OapvFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.OapvDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/OapvNoFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/OapvNoFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..93586968d269362d3b1a02274ed938c2d918105c
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/OapvNoFieldClosingOperationTests.cs
+@@ -0,0 +1,40 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class OapvNoFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NotReverseSide_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasOAPV = true,
++            OAPVEnabled = true,
++            BothCbctReverseSide = false,
++        };
++
++        var operation = new OapvNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_ReverseSide_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasOAPV = true,
++            OAPVEnabled = true,
++            BothCbctReverseSide = true,
++        };
++
++        var operation = new OapvNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.OapvDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/SwitchBusVtToReserveOperationTests.cs b/Tests/InstructionGeneration/Operations/SwitchBusVtToReserveOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..620abadb0715a03183bca750589a01e24dc938d8
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/SwitchBusVtToReserveOperationTests.cs
+@@ -0,0 +1,36 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class SwitchBusVtToReserveOperationTests
++{
++    [Fact]
++    public void Evaluate_NotRequired_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedSwitchBusVTToReserve = false,
++        };
++
++        var operation = new SwitchBusVtToReserveOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Required_ReturnsInstruction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedSwitchBusVTToReserve = true,
++        };
++
++        var operation = new SwitchBusVtToReserveOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.SwitchBusVtToReserve, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/SwitchLineVtToReserveOperationTests.cs b/Tests/InstructionGeneration/Operations/SwitchLineVtToReserveOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..efbdcd71f0a37570da5ab7a3ac3463f38904feb8
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/SwitchLineVtToReserveOperationTests.cs
+@@ -0,0 +1,36 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class SwitchLineVtToReserveOperationTests
++{
++    [Fact]
++    public void Evaluate_NotRequired_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedSwitchLineVTToReserve = false,
++        };
++
++        var operation = new SwitchLineVtToReserveOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Required_ReturnsInstruction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedSwitchLineVTToReserve = true,
++        };
++
++        var operation = new SwitchLineVtToReserveOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.SwitchLineVtToReserve, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/TapvGenericOperationTests.cs b/Tests/InstructionGeneration/Operations/TapvGenericOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e266e4e783ec165bfc80164f1e2a557d5dd8a76e
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/TapvGenericOperationTests.cs
+@@ -0,0 +1,37 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class TapvGenericOperationTests
++{
++    [Fact]
++    public void Evaluate_NoTapv_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasTAPV = false,
++        };
++
++        var operation = new TapvGenericOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_Enabled_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            HasTAPV = true,
++            TAPVEnabled = true,
++        };
++
++        var operation = new TapvGenericOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.TapvDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/TapvNoFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/TapvNoFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..f4f8e2c06a2e67a0732ec3ceb774f855c0c525e1
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/TapvNoFieldClosingOperationTests.cs
+@@ -0,0 +1,40 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class TapvNoFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NotReverseSide_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasTAPV = true,
++            TAPVEnabled = true,
++            BothCbctReverseSide = false,
++        };
++
++        var operation = new TapvNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_ReverseSide_DisablesFunction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutNoFieldClosing) with
++        {
++            HasTAPV = true,
++            TAPVEnabled = true,
++            BothCbctReverseSide = true,
++        };
++
++        var operation = new TapvNoFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.TapvDisableFunction, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/Operations/UpaskFieldClosingOperationTests.cs b/Tests/InstructionGeneration/Operations/UpaskFieldClosingOperationTests.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..e7a78cb2e512604d44e23c8f9bca49110cbf22e0
+--- /dev/null
++++ b/Tests/InstructionGeneration/Operations/UpaskFieldClosingOperationTests.cs
+@@ -0,0 +1,36 @@
++using ApplicationLayer.InstructionGeneration.Models;
++using ApplicationLayer.InstructionGeneration.Operations;
++using Xunit;
++
++namespace Tests.InstructionGeneration.Operations;
++
++public class UpaskFieldClosingOperationTests
++{
++    [Fact]
++    public void Evaluate_NoNeed_ReturnsNone()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedDisableUpaskReceivers = false,
++        };
++
++        var operation = new UpaskFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.False(decision.AddItem);
++    }
++
++    [Fact]
++    public void Evaluate_NeedDisable_ReturnsInstruction()
++    {
++        var criteria = TestCriteriaFactory.Create(ActionCode.VlOutFieldClosing) with
++        {
++            NeedDisableUpaskReceivers = true,
++        };
++
++        var operation = new UpaskFieldClosingOperation();
++        var decision = operation.Evaluate(criteria);
++
++        Assert.Equal(InstructionCodes.UpaskDisableReceivers, decision.Item?.Code);
++    }
++}
+diff --git a/Tests/InstructionGeneration/TestCriteriaFactory.cs b/Tests/InstructionGeneration/TestCriteriaFactory.cs
+new file mode 100644
+index 0000000000000000000000000000000000000000..91fef3feae5009280f3a7aeac09c61a792cdba3a
+--- /dev/null
++++ b/Tests/InstructionGeneration/TestCriteriaFactory.cs
+@@ -0,0 +1,12 @@
++using ApplicationLayer.InstructionGeneration.Criteria;
++using ApplicationLayer.InstructionGeneration.Models;
++
++namespace Tests.InstructionGeneration;
++
++internal static class TestCriteriaFactory
++{
++    internal static LineOperationCriteria Create(ActionCode actionCode)
++    {
++        return new LineOperationCriteria("VL-1", SideOfLine.Begin, 1, actionCode);
++    }
++}
+\ No newline at end of file
