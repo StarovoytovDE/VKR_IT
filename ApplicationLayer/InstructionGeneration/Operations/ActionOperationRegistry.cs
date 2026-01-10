@@ -32,18 +32,37 @@ public sealed class ActionOperationRegistry : IActionOperationRegistry
             [ActionCode.LineWithdrawalWithFieldClosing] = new[]
             {
                 OperationCodes.DfzFieldClosing,
-                OperationCodes.DzlFieldClosing
+                OperationCodes.DzlFieldClosing,
+                OperationCodes.DzFieldClosing,
+                OperationCodes.Oapv,
+                OperationCodes.Tapv,
+                OperationCodes.UpaskReceiversWithdrawal,
+                OperationCodes.LineVtToReserveVoltageCircuitsTransfer,
+                OperationCodes.DisconnectLineCtFromDzo,
+                OperationCodes.MtzoShinovkaAtoB,
             },
 
-            //[ActionCode.LineWithdrawalWithoutFieldClosing] = new[]
-            //{
-            //    // Здесь позже добавишь DfzNoFieldClosingOperation, когда реализуешь
-            //    OperationCodes.DzlNoFieldClosing
-            //},
+            [ActionCode.LineWithdrawalWithoutFieldClosing] = new[]
+            {
+                OperationCodes.DfzNoFieldClosing,
+                OperationCodes.DzNoFieldClosing,
+                OperationCodes.OapvNoFieldClosing,
+                OperationCodes.TapvNoFieldClosing,
+                OperationCodes.MtzoShinovkaAtoB,
+            },
 
-            // Заготовки под прочие сценарии:
-            [ActionCode.LineWithdrawalWithBusSideDisconnector] = Array.Empty<string>(),
-            [ActionCode.LineSingleSideWithdrawal] = Array.Empty<string>()
+            [ActionCode.LineWithdrawalWithBusSideDisconnector] = new[]
+            {
+                OperationCodes.Oapv,
+                OperationCodes.Tapv,
+                OperationCodes.BusbarVtToReserveBusVtVoltageCircuitsTransfer,
+                OperationCodes.DisconnectLineCtFromDzo,
+            },
+
+            [ActionCode.LineSingleSideWithdrawal] = new[]
+            {
+                OperationCodes.DfzSingleSideWithdrawal
+            },
         };
 
         ValidateConfiguration();

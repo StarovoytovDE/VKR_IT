@@ -65,23 +65,31 @@ public sealed record LineOperationCriteria
     /// <summary>Введена ли функция ДФЗ.</summary>
     public bool DFZEnabled { get; init; }
 
-    /// <summary>Подключен ли ДФЗ к линейному ТТ.</summary>
-    public bool DFZConnectedToLineCT { get; init; }
+    /// <summary>Подключено ли Устройсво РЗ и СА к линейному ТТ.</summary>
+    public bool DeviceConnectedToLineCT { get; init; }
 
     /// <summary>Подключен ли ДФЗ к линейному ТН.</summary>
     public bool DFZConnectedToLineVT { get; init; }
 
+    /// <summary>Требуется ли перевод ТН на резерв.</summary>
+    public bool NeedSwitchVTToReserve { get; init; }
+
     /// <summary>Требуется ли перевод линейного ТН на резерв.</summary>
-    public bool NeedSwitchLineVTToReserve { get; init; }
+    public bool NeedSwitchFromLineVTToReserve { get; init; }
 
     /// <summary>Требуется ли перевод шинного ТН на резерв.</summary>
-    public bool NeedSwitchBusVTToReserve { get; init; }
+    public bool NeedSwitchFromBusVTToReserve { get; init; }
 
-    /// <summary>Оба ТТ выключателя находятся на обратной стороне линии.</summary>
-    public bool BothCbctReverseSide { get; init; }
+    /// <summary>Оба ТТ выключателя находятся со стороны подстанции.</summary>
+    public bool BothLineBreakerCTsOnSubstationSide { get; init; }
 
     /// <summary>Является ли функция единственной в устройстве.</summary>
     public bool IsOnlyFunctionInDevice { get; init; }
+
+    /// <summary>
+    /// Получает значение, указывающее, есть ли у устройства функция МТЗ ошиновки.
+    /// </summary>
+    public bool HasMtzoShinovka { get; init; }
 
     // =========================
     // Параметры функции ДЗЛ

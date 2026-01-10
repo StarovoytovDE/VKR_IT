@@ -24,11 +24,11 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
             whenTrue: DT.Decision(
                 predicate: c => c.DFZEnabled,
                 whenTrue: DT.Decision(
-                    predicate: c => c.DFZConnectedToLineCT,
+                    predicate: c => c.DeviceConnectedToLineCT,
                     whenTrue: DT.Decision(
                         predicate: c => c.DFZConnectedToLineVT,
                         whenTrue: DT.Decision(
-                            predicate: c => c.NeedSwitchLineVTToReserve,
+                            predicate: c => c.NeedSwitchVTToReserve,
                             whenTrue: DT.Action(InstructionTexts.FollowVoltageTransferInstructions),
                             whenFalse: withdraw
                         ),

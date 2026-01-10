@@ -13,19 +13,32 @@ internal static class Program
         Console.WriteLine("=== ConsoleTest: InstructionGenerator ===");
 
         // 1) "Простой функциональный DI" руками:
-        //    Создаём и регистрируем ВСЕ операции, которые потенциально используются
-        //    в конфигурации ActionOperationRegistry (ActionCode -> OperationCodes[]).
-        //
-        // Важно:
-        // - если в реестре упомянут код операции, но сама операция не зарегистрирована здесь,
-        //   реестр выбросит исключение при ValidateConfiguration().
+        //    ВАЖНО: здесь должны быть зарегистрированы ВСЕ операции,
+        //    которые упоминаются в ActionOperationRegistry (в _actionToOperationCodes).
         var operations = new IOperation[]
         {
-            // ДФЗ: для сценария "вывод линии с замыканием поля"
+            // ===== Вывод ВЛ с замыканием поля =====
             new DfzFieldClosingOperation(),
-
-            // ДЗЛ: отдельные операции (коды различаются), даже если логика пока одинаковая
             new DzlFieldClosingOperation(),
+            new DzFieldClosingOperation(),
+            new UpaskReceiversWithdrawalOperation(),
+            new LineVtToReserveVoltageCircuitsTransferOperation(),
+            new DisconnectLineCtFromDzoOperation(),
+            new MtzoShinovkaAtoBOperation(),
+            new OapvOperation(),
+            new TapvOperation(),
+
+            // ===== Вывод ВЛ без замыкания поля =====
+            new DfzNoFieldClosingOperation(),
+            new DzNoFieldClosingOperation(),
+            new OapvNoFieldClosingOperation(),
+            new TapvNoFieldClosingOperation(),
+
+            // ===== LineWithdrawalWithBusSideDisconnector =====
+            new BusbarVtToReserveBusVtVoltageCircuitsTransferOperation(),
+
+            // ===== Односторонний вывод линии =====
+            new DfzSingleSideWithdrawalOperation(),
         };
 
         // 2) Реестр соответствия ActionCode -> операции
@@ -34,13 +47,13 @@ internal static class Program
         // 3) Генератор указаний: выбирает операции по ActionCode и выполняет их
         var generator = new InstructionGenerator(registry);
 
-        // 4) Критерии для одного устройства и одной стороны линии.
-        //    Сейчас критерии задаются вручную для тестирования.
-        //
-        // Важно:
-        // - ActionCode определяет, какие операции будут запущены (через реестр).
-        // - Остальные поля определяют, что вернут алгоритмы операций.
-        var criteria = new LineOperationCriteria(
+        // =====================================================================
+        // ТЕСТ №1: LineWithdrawalWithFieldClosing
+        // =====================================================================
+        Console.WriteLine();
+        Console.WriteLine("=== Test #1: LineWithdrawalWithFieldClosing ===");
+
+        var criteria1 = new LineOperationCriteria(
             lineCode: "VL-500-01",
             side: SideOfLine.A,
             deviceObjectId: 1,
@@ -49,35 +62,162 @@ internal static class Program
             // ===== Параметры ДФЗ =====
             HasDFZ = true,
             DFZEnabled = true,
-            DFZConnectedToLineCT = true,
             DFZConnectedToLineVT = true,
-            NeedSwitchLineVTToReserve = false,
 
             // ===== Параметры ДЗЛ =====
             HasDZL = true,
             DZLEnabled = true,
 
-            IsOnlyFunctionInDevice = false
+            // ===== Параметры ДЗ =====
+            HasDZ = true,
+            DZEnabled = true,
+            DZConnectedToLineVT = true,
+
+            // ===== Параметры ОАПВ =====
+            HasOAPV = true,
+            OAPVEnabled = true,
+
+            // ===== Параметры ТАПВ =====
+            HasTAPV = true,
+            TAPVEnabled = true,
+
+            // ===== Параметры УПАСК =====
+            NeedDisableUpaskReceivers = true,
+
+            // ===== Перевод цепей напряжения с линейного ТН на резервный =====
+            // ВАЖНО: ты писал, что в некоторых операциях используешь NeedSwitchVTToReserve.
+            // Поэтому, чтобы точно увидеть результат, выставляем оба флага.
+            NeedSwitchFromLineVTToReserve = true,
+            NeedSwitchVTToReserve = false,
+
+            // ===== Отключение ТТ от ДЗО =====
+            DeviceConnectedToLineCT = true,
+            NeedDisconnectLineCTFromDZO = true,
+
+            // ===== МТЗ ошиновки =====
+            HasMtzoShinovka = true,
+            CtRemainsEnergizedOnThisSide = true,
+
+            // ===== Общие параметры =====
+            IsOnlyFunctionInDevice = true
         };
 
-        // 5) Генерация указаний
-        var instructions = generator.Generate(criteria);
+        var instructions1 = generator.Generate(criteria1);
+        PrintResult(instructions1);
 
-        // 6) Вывод результата
+        // =====================================================================
+        // ТЕСТ №2: LineWithdrawalWithoutFieldClosing
+        // =====================================================================
+        Console.WriteLine();
+        Console.WriteLine("=== Test #2: LineWithdrawalWithoutFieldClosing ===");
+
+        var criteria2 = new LineOperationCriteria(
+            lineCode: "VL-500-01",
+            side: SideOfLine.A,
+            deviceObjectId: 1,
+            actionCode: ActionCode.LineWithdrawalWithoutFieldClosing)
+        {
+            // ===== ДФЗ без замыкания поля =====
+            HasDFZ = true,
+            DFZEnabled = true,
+
+
+            // ===== ДЗ без замыкания поля =====
+            HasDZ = true,
+            DZEnabled = true,
+
+            // ===== ОАПВ =====
+            HasOAPV = true,
+            OAPVEnabled = true,
+
+            // ===== ТАПВ =====
+            HasTAPV = true,
+            TAPVEnabled = true,
+
+            // ===== МТЗ ошиновки =====
+            HasMtzoShinovka = true,
+            CtRemainsEnergizedOnThisSide = true,
+
+            // ===== Общие параметры =====
+            IsOnlyFunctionInDevice = false,
+            BothLineBreakerCTsOnSubstationSide = true,
+        };
+
+        var instructions2 = generator.Generate(criteria2);
+        PrintResult(instructions2);
+
+        // =====================================================================
+        // ТЕСТ №3: LineWithdrawalWithBusSideDisconnector
+        // =====================================================================
+        Console.WriteLine();
+        Console.WriteLine("=== Test #3: LineWithdrawalWithBusSideDisconnector ===");
+
+        var criteria3 = new LineOperationCriteria(
+            lineCode: "VL-500-01",
+            side: SideOfLine.A,
+            deviceObjectId: 1,
+            actionCode: ActionCode.LineWithdrawalWithBusSideDisconnector)
+        {
+            // Для этого действия в ActionOperationRegistry подключена только операция:
+            // OperationCodes.DisconnectLineCtFromDzo
+
+            DeviceConnectedToLineCT = true,
+            NeedDisconnectLineCTFromDZO = true,
+
+            NeedSwitchFromBusVTToReserve = true,
+
+            // ===== ОАПВ =====
+            HasOAPV = true,
+            OAPVEnabled = true,
+
+            // ===== ТАПВ =====
+            HasTAPV = true,
+            TAPVEnabled = true,
+        };
+
+        var instructions3 = generator.Generate(criteria3);
+        PrintResult(instructions3);
+
+        // =====================================================================
+        // ТЕСТ №4: LineSingleSideWithdrawal
+        // =====================================================================
+        Console.WriteLine();
+        Console.WriteLine("=== Test #4: LineSingleSideWithdrawal ===");
+
+        var criteria4 = new LineOperationCriteria(
+            lineCode: "VL-500-01",
+            side: SideOfLine.A,
+            deviceObjectId: 1,
+            actionCode: ActionCode.LineSingleSideWithdrawal)
+        {
+            HasDFZ = true,
+            DFZEnabled = true,
+            DeviceConnectedToLineCT = true,
+            IsOnlyFunctionInDevice = false
+        };
+        
+        var instructions4 = generator.Generate(criteria4);
+        PrintResult(instructions4);
+
+        Console.WriteLine();
+        Console.WriteLine("=== End ===");
+        Console.ReadKey();
+
+    }
+
+    /// <summary>
+    /// Печатает список сформированных указаний в консоль.
+    /// </summary>
+    private static void PrintResult(System.Collections.Generic.IReadOnlyList<string> instructions)
+    {
         if (instructions.Count == 0)
         {
             Console.WriteLine("Результат: операций не требуется");
-        }
-        else
-        {
-            Console.WriteLine("Результат:");
-            foreach (var instruction in instructions)
-            {
-                Console.WriteLine($" - {instruction}");
-            }
+            return;
         }
 
-        Console.WriteLine("=== End ===");
-        Console.ReadKey();
+        Console.WriteLine("Результат:");
+        foreach (var instruction in instructions)
+            Console.WriteLine($" - {instruction}");
     }
 }
