@@ -15,38 +15,15 @@ public sealed class DfzSingleSideWithdrawalOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        // Алгоритм:
-        // 1) Есть ли функция ДФЗ?
-        //    нет -> null
-        //    да  -> 2
-        //
-        // 2) Функция введена?
-        //    нет -> null
-        //    да  -> 3
-        //
-        // 3) Устройство подключено к линейному ТТ?
-        //    нет -> null
-        //    да  -> 4
-        //
-        // 4) Это единственная функция в устройстве?
-        //    да  -> "Вывести устройство"
-        //    нет -> "Вывести функцию ДФЗ"
+        var withdraw = DfzNodes.WithdrawByOnlyFunctionRule();
 
-        var withdraw =
-            OperationNodes.WithdrawByOnlyFunctionRule(FunctionNames.DFZ);
-
-        return Node<LineOperationCriteria>.Decision(
-            predicate: c => c.HasDFZ,
-            whenTrue: Node<LineOperationCriteria>.Decision(
-                predicate: c => c.DFZEnabled,
-                whenTrue: Node<LineOperationCriteria>.Decision(
-                    predicate: c => c.DeviceConnectedToLineCT,
-                    whenTrue: withdraw,
-                    whenFalse: Node<LineOperationCriteria>.Action(null)
-                ),
+        // Специфика "enabled" у этого варианта начинается с общего ромба DeviceConnectedToLineCT.
+        var enabledBranch =
+            DfzNodes.IfDeviceConnectedToLineCT(
+                whenTrue: withdraw,
                 whenFalse: Node<LineOperationCriteria>.Action(null)
-            ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
-        );
+            );
+
+        return DfzNodes.HasAndEnabled(enabledBranch);
     }
 }

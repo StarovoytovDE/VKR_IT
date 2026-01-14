@@ -14,28 +14,13 @@ public sealed class DzNoFieldClosingOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        // Алгоритм (утверждённый):
-        // HasDZ?
-        //   нет -> null
-        //   да  -> DZEnabled?
-        //          нет -> null
-        //          да  -> BothLineBreakerCTsOnSubstationSide?
-        //                 нет -> null
-        //                 да  -> "Вывести функцию ДЗ"
-
-        return Node<LineOperationCriteria>.Decision(
-            predicate: c => c.HasDZ,
-            whenTrue: Node<LineOperationCriteria>.Decision(
-                predicate: c => c.DZEnabled,
-                whenTrue: Node<LineOperationCriteria>.Decision(
-                    predicate: c => c.BothLineBreakerCTsOnSubstationSide,
-                    whenTrue: Node<LineOperationCriteria>.Action(
-                        InstructionTexts.WithdrawFunction(FunctionNames.DZ)),
-                    whenFalse: Node<LineOperationCriteria>.Action(null)
-                ),
+        var enabledBranch =
+            Node<LineOperationCriteria>.Decision(
+                predicate: c => c.BothLineBreakerCTsOnSubstationSide,
+                whenTrue: DzNodes.WithdrawFunction(),
                 whenFalse: Node<LineOperationCriteria>.Action(null)
-            ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
-        );
+            );
+
+        return DzNodes.HasAndEnabled(enabledBranch);
     }
 }

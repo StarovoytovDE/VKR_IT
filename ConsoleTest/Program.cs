@@ -99,7 +99,7 @@ internal static class Program
             CtRemainsEnergizedOnThisSide = true,
 
             // ===== Общие параметры =====
-            IsOnlyFunctionInDevice = true
+            IsOnlyFunctionInDevice = false
         };
 
         var instructions1 = generator.Generate(criteria1);

@@ -14,31 +14,15 @@ public sealed class DfzNoFieldClosingOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        // Алгоритм (утверждённый):
-        // HasDFZ?
-        //   нет -> null
-        //   да  -> DFZEnabled?
-        //          нет -> null
-        //          да  -> BothLineBreakerCTsOnSubstationSide?
-        //                 нет -> null
-        //                 да  -> IsOnlyFunctionInDevice?
-        //                        да  -> "Вывести устройство"
-        //                        нет -> "Вывести функцию ДФЗ"
+        var withdraw = DfzNodes.WithdrawByOnlyFunctionRule();
 
-        var withdraw = OperationNodes.WithdrawByOnlyFunctionRule(FunctionNames.DFZ);
-
-        return Node<LineOperationCriteria>.Decision(
-            predicate: c => c.HasDFZ,
-            whenTrue: Node<LineOperationCriteria>.Decision(
-                predicate: c => c.DFZEnabled,
-                whenTrue: Node<LineOperationCriteria>.Decision(
-                    predicate: c => c.BothLineBreakerCTsOnSubstationSide,
-                    whenTrue: withdraw,
-                    whenFalse: Node<LineOperationCriteria>.Action(null)
-                ),
+        var enabledBranch =
+            Node<LineOperationCriteria>.Decision(
+                predicate: c => c.BothLineBreakerCTsOnSubstationSide,
+                whenTrue: withdraw,
                 whenFalse: Node<LineOperationCriteria>.Action(null)
-            ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
-        );
+            );
+
+        return DfzNodes.HasAndEnabled(enabledBranch);
     }
 }

@@ -1,9 +1,6 @@
 ﻿using ApplicationLayer.InstructionGeneration.Criteria;
 using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 
-// Алиас для читабельности деревьев решений
-using DT = ApplicationLayer.InstructionGeneration.Operations.DecisionTree.Node<ApplicationLayer.InstructionGeneration.Criteria.LineOperationCriteria>;
-
 namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
@@ -15,35 +12,20 @@ public sealed class DzFieldClosingOperation : DecisionTreeOperationBase
     public override string Code => OperationCodes.DzFieldClosing;
 
     /// <inheritdoc />
-    protected override DT BuildTree()
+    protected override Node<LineOperationCriteria> BuildTree()
     {
-        // Алгоритм (подтверждённый):
-        // HasDZ?
-        //   нет -> null
-        //   да  -> DZEnabled?
-        //          нет -> null
-        //          да  -> DZConnectedToLineVT?
-        //                 нет -> null
-        //                 да  -> NeedSwitchLineVTToReserve?
-        //                        да  -> FollowVoltageTransferInstructions
-        //                        нет -> WithdrawFunction("ДЗ")
-
-        return DT.Decision(
-            predicate: c => c.HasDZ,
-            whenTrue: DT.Decision(
-                predicate: c => c.DZEnabled,
-                whenTrue: DT.Decision(
-                    predicate: c => c.DZConnectedToLineVT,
-                    whenTrue: DT.Decision(
-                        predicate: c => c.NeedSwitchVTToReserve,
-                        whenTrue: DT.Action(InstructionTexts.FollowVoltageTransferInstructions),
-                        whenFalse: DT.Action(InstructionTexts.WithdrawFunction(FunctionNames.DZ))
-                    ),
-                    whenFalse: DT.Action(null)
+        // Это — та же enabled-ветка, что у тебя была, только без повторения HasDZ/DZEnabled.
+        var enabledBranch =
+            Node<LineOperationCriteria>.Decision(
+                predicate: c => c.DZConnectedToLineVT,
+                whenTrue: Node<LineOperationCriteria>.Decision(
+                    predicate: c => c.NeedSwitchVTToReserve,
+                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
+                    whenFalse: DzNodes.WithdrawFunction()
                 ),
-                whenFalse: DT.Action(null)
-            ),
-            whenFalse: DT.Action(null)
-        );
+                whenFalse: Node<LineOperationCriteria>.Action(null)
+            );
+
+        return DzNodes.HasAndEnabled(enabledBranch);
     }
 }

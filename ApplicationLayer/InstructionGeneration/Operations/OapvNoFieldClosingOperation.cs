@@ -14,28 +14,15 @@ public sealed class OapvNoFieldClosingOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        // Алгоритм (утверждённый по схеме):
-        // HasOAPV?
-        //   нет -> null
-        //   да  -> OAPVEnabled?
-        //          нет -> null
-        //          да  -> BothLineBreakerCTsOnSubstationSide?
-        //                 нет -> null
-        //                 да  -> "Вывести функцию ОАПВ"
-
-        return Node<LineOperationCriteria>.Decision(
-            predicate: c => c.HasOAPV,
-            whenTrue: Node<LineOperationCriteria>.Decision(
-                predicate: c => c.OAPVEnabled,
-                whenTrue: Node<LineOperationCriteria>.Decision(
-                    predicate: c => c.BothLineBreakerCTsOnSubstationSide,
-                    whenTrue: Node<LineOperationCriteria>.Action(
-                        InstructionTexts.WithdrawFunction(FunctionNames.OAPV)),
-                    whenFalse: Node<LineOperationCriteria>.Action(null)
-                ),
+        // Специфика этого варианта начинается только после Has/Enabled:
+        // BothLineBreakerCTsOnSubstationSide? -> вывести ОАПВ : null
+        var enabledBranch =
+            Node<LineOperationCriteria>.Decision(
+                predicate: c => c.BothLineBreakerCTsOnSubstationSide,
+                whenTrue: OapvNodes.WithdrawFunction(),
                 whenFalse: Node<LineOperationCriteria>.Action(null)
-            ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
-        );
+            );
+
+        return OapvNodes.HasAndEnabled(enabledBranch);
     }
 }

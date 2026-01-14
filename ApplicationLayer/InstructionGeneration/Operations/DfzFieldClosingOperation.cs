@@ -1,9 +1,6 @@
 ﻿using ApplicationLayer.InstructionGeneration.Criteria;
 using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 
-// Алиасы для читабельности
-using DT = ApplicationLayer.InstructionGeneration.Operations.DecisionTree.Node<ApplicationLayer.InstructionGeneration.Criteria.LineOperationCriteria>;
-
 namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
@@ -15,30 +12,30 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
     public override string Code => OperationCodes.DfzFieldClosing;
 
     /// <inheritdoc />
-    protected override DT BuildTree()
+    protected override Node<LineOperationCriteria> BuildTree()
     {
-        var withdraw = OperationNodes.WithdrawByOnlyFunctionRule("ДФЗ");
+        var withdraw = DfzNodes.WithdrawByOnlyFunctionRule();
 
-        return DT.Decision(
-            predicate: c => c.HasDFZ,
-            whenTrue: DT.Decision(
-                predicate: c => c.DFZEnabled,
-                whenTrue: DT.Decision(
-                    predicate: c => c.DeviceConnectedToLineCT,
-                    whenTrue: DT.Decision(
-                        predicate: c => c.DFZConnectedToLineVT,
-                        whenTrue: DT.Decision(
-                            predicate: c => c.NeedSwitchVTToReserve,
-                            whenTrue: DT.Action(InstructionTexts.FollowVoltageTransferInstructions),
-                            whenFalse: withdraw
-                        ),
-                        whenFalse: DT.Action(null)
-                    ),
+        // Ветка whenTrue: устройство подключено к линейному ТТ -> дальше ваши частные условия.
+        var connectedToLineCtBranch =
+            Node<LineOperationCriteria>.Decision(
+                predicate: c => c.CtRemainsEnergizedOnThisSide,
+                whenTrue: Node<LineOperationCriteria>.Decision(
+                    predicate: c => c.NeedSwitchVTToReserve,
+                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
                     whenFalse: withdraw
                 ),
-                whenFalse: DT.Action(null)
-            ),
-            whenFalse: DT.Action(null)
-        );
+                whenFalse: Node<LineOperationCriteria>.Action(null)
+            );
+
+        // Общий ромб семейства DFZ вынесен в DfzNodes.
+        // whenFalse здесь по вашей текущей логике ведёт на withdraw.
+        var enabledBranch =
+            DfzNodes.IfDeviceConnectedToLineCT(
+                whenTrue: connectedToLineCtBranch,
+                whenFalse: withdraw
+            );
+
+        return DfzNodes.HasAndEnabled(enabledBranch);
     }
 }
