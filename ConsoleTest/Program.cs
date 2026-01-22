@@ -1,16 +1,55 @@
 ﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using ApplicationLayer.InstructionGeneration.Criteria;
 using ApplicationLayer.InstructionGeneration.Models;
 using ApplicationLayer.InstructionGeneration.Operations;
+using Domain.Entities;
+using Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 internal static class Program
 {
     /// <summary>
     /// Точка входа консольного теста генератора указаний.
+    /// Демонстрация: читаем HazDFZ из БД (таблица dfz.haz_dfz) через EF Core и
+    /// прокидываем в критерии LineOperationCriteria.HasDFZ.
     /// </summary>
-    private static void Main()
+    private static async Task Main()
     {
-        Console.WriteLine("=== ConsoleTest: InstructionGenerator ===");
+        Console.WriteLine("=== ConsoleTest: InstructionGenerator + EF Core ===");
+
+        // ВАЖНО:
+        // 1) Здесь используется реальная PostgreSQL БД из appsettings WinForms.
+        // 2) Для простоты (чтобы не тащить сюда конфиги/HostBuilder) строку подключения задаём прямо тут.
+        //    При желании позже вынесем в appsettings ConsoleTest и общий хост.
+        var connectionString =
+            "Host=localhost;Port=5432;Database=vkr_it;Username=vkr_it_app;Password=VKRitAPP12345671";
+
+        var dbOptions = new DbContextOptionsBuilder<VkrItDbContext>()
+            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("Infrastructure"))
+            .UseSnakeCaseNamingConvention()
+            .Options;
+
+        await using var db = new VkrItDbContext(dbOptions);
+
+        // Применяем миграции (БД должна быть создана/обновлена).
+        await db.Database.MigrateAsync();
+
+        // Минимальные данные (без полноценного сидера): ObjectType -> Substation -> Object -> Device -> Dfz.
+        // Нужны, чтобы вставить одну запись dfz (иначе FK на device не даст).
+        var deviceId = await EnsureMinimalDeviceWithSingleDfzAsync(db);
+
+        // Читаем ДФЗ из БД (берём первую для устройства).
+        // Здесь и есть "достаём параметр HazDFZ из БД через EF Core".
+        var dfz = await db.Dfzs
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .OrderBy(x => x.DfzId)
+            .FirstAsync();
+
+        Console.WriteLine();
+        Console.WriteLine($"DB: dfz row найден: DfzId={dfz.DfzId}, DeviceId={dfz.DeviceId}, HazDfz={dfz.HazDfz}, State={dfz.State}");
 
         // 1) "Простой функциональный DI" руками:
         //    ВАЖНО: здесь должны быть зарегистрированы ВСЕ операции,
@@ -44,165 +83,114 @@ internal static class Program
         // 2) Реестр соответствия ActionCode -> операции
         IActionOperationRegistry registry = new ActionOperationRegistry(operations);
 
-        // 3) Генератор указаний: выбирает операции по ActionCode и выполняет их
+        // 3) Генератор указаний
         var generator = new InstructionGenerator(registry);
 
         // =====================================================================
-        // ТЕСТ №1: LineWithdrawalWithFieldClosing
+        // ТЕСТ: только один параметр HazDFZ из БД
         // =====================================================================
         Console.WriteLine();
-        Console.WriteLine("=== Test #1: LineWithdrawalWithFieldClosing ===");
+        Console.WriteLine("=== Test: HazDFZ from DB => criteria.HasDFZ ===");
 
-        var criteria1 = new LineOperationCriteria(
+        // Минимально заполняем только то, что нужно дереву DFZ:
+        // HasDFZ и DFZEnabled. Остальные параметры пока не трогаем и оставляем дефолтами (false).
+        var criteria = new LineOperationCriteria(
             lineCode: "VL-500-01",
             side: SideOfLine.A,
-            deviceObjectId: 1,
-            actionCode: ActionCode.LineWithdrawalWithFieldClosing)
-        {
-            // ===== Параметры ДФЗ =====
-            HasDFZ = true,
-            DFZEnabled = true,
-            DFZConnectedToLineVT = true,
-
-            // ===== Параметры ДЗЛ =====
-            HasDZL = true,
-            DZLEnabled = true,
-
-            // ===== Параметры ДЗ =====
-            HasDZ = true,
-            DZEnabled = true,
-            DZConnectedToLineVT = true,
-
-            // ===== Параметры ОАПВ =====
-            HasOAPV = true,
-            OAPVEnabled = true,
-
-            // ===== Параметры ТАПВ =====
-            HasTAPV = true,
-            TAPVEnabled = true,
-
-            // ===== Параметры УПАСК =====
-            NeedDisableUpaskReceivers = true,
-
-            // ===== Перевод цепей напряжения с линейного ТН на резервный =====
-            // ВАЖНО: ты писал, что в некоторых операциях используешь NeedSwitchVTToReserve.
-            // Поэтому, чтобы точно увидеть результат, выставляем оба флага.
-            NeedSwitchFromLineVTToReserve = true,
-            NeedSwitchVTToReserve = false,
-
-            // ===== Отключение ТТ от ДЗО =====
-            DeviceConnectedToLineCT = true,
-            NeedDisconnectLineCTFromDZO = true,
-
-            // ===== МТЗ ошиновки =====
-            HasMtzoShinovka = true,
-            CtRemainsEnergizedOnThisSide = true,
-
-            // ===== Общие параметры =====
-            IsOnlyFunctionInDevice = false
-        };
-
-        var instructions1 = generator.Generate(criteria1);
-        PrintResult(instructions1);
-
-        // =====================================================================
-        // ТЕСТ №2: LineWithdrawalWithoutFieldClosing
-        // =====================================================================
-        Console.WriteLine();
-        Console.WriteLine("=== Test #2: LineWithdrawalWithoutFieldClosing ===");
-
-        var criteria2 = new LineOperationCriteria(
-            lineCode: "VL-500-01",
-            side: SideOfLine.A,
-            deviceObjectId: 1,
-            actionCode: ActionCode.LineWithdrawalWithoutFieldClosing)
-        {
-            // ===== ДФЗ без замыкания поля =====
-            HasDFZ = true,
-            DFZEnabled = true,
-
-
-            // ===== ДЗ без замыкания поля =====
-            HasDZ = true,
-            DZEnabled = true,
-
-            // ===== ОАПВ =====
-            HasOAPV = true,
-            OAPVEnabled = true,
-
-            // ===== ТАПВ =====
-            HasTAPV = true,
-            TAPVEnabled = true,
-
-            // ===== МТЗ ошиновки =====
-            HasMtzoShinovka = true,
-            CtRemainsEnergizedOnThisSide = true,
-
-            // ===== Общие параметры =====
-            IsOnlyFunctionInDevice = false,
-            BothLineBreakerCTsOnSubstationSide = true,
-        };
-
-        var instructions2 = generator.Generate(criteria2);
-        PrintResult(instructions2);
-
-        // =====================================================================
-        // ТЕСТ №3: LineWithdrawalWithBusSideDisconnector
-        // =====================================================================
-        Console.WriteLine();
-        Console.WriteLine("=== Test #3: LineWithdrawalWithBusSideDisconnector ===");
-
-        var criteria3 = new LineOperationCriteria(
-            lineCode: "VL-500-01",
-            side: SideOfLine.A,
-            deviceObjectId: 1,
-            actionCode: ActionCode.LineWithdrawalWithBusSideDisconnector)
-        {
-            // Для этого действия в ActionOperationRegistry подключена только операция:
-            // OperationCodes.DisconnectLineCtFromDzo
-
-            DeviceConnectedToLineCT = true,
-            NeedDisconnectLineCTFromDZO = true,
-
-            NeedSwitchFromBusVTToReserve = true,
-
-            // ===== ОАПВ =====
-            HasOAPV = true,
-            OAPVEnabled = true,
-
-            // ===== ТАПВ =====
-            HasTAPV = true,
-            TAPVEnabled = true,
-        };
-
-        var instructions3 = generator.Generate(criteria3);
-        PrintResult(instructions3);
-
-        // =====================================================================
-        // ТЕСТ №4: LineSingleSideWithdrawal
-        // =====================================================================
-        Console.WriteLine();
-        Console.WriteLine("=== Test #4: LineSingleSideWithdrawal ===");
-
-        var criteria4 = new LineOperationCriteria(
-            lineCode: "VL-500-01",
-            side: SideOfLine.A,
-            deviceObjectId: 1,
+            deviceObjectId: (int)deviceId,
             actionCode: ActionCode.LineSingleSideWithdrawal)
         {
-            HasDFZ = true,
-            DFZEnabled = true,
+            HasDFZ = dfz.HazDfz,
+            DFZEnabled = dfz.State,
+
+            // Для этой операции (DfzSingleSideWithdrawal) дальше проверяется DeviceConnectedToLineCT.
+            // Это НЕ "параметр HazDFZ", но без него тест может вернуть null даже при HasDFZ=true.
+            // Чтобы увидеть результат, выставим true.
             DeviceConnectedToLineCT = true,
+
+            // Чтобы дерево вернуло "вывести функцию", а не "вывести устройство" — оставим false.
             IsOnlyFunctionInDevice = false
         };
-        
-        var instructions4 = generator.Generate(criteria4);
-        PrintResult(instructions4);
+
+        var instructions = generator.Generate(criteria);
+        PrintResult(instructions);
 
         Console.WriteLine();
         Console.WriteLine("=== End ===");
         Console.ReadKey();
+    }
 
+    /// <summary>
+    /// Гарантирует наличие минимального набора данных и одной записи dfz для демонстрации HazDFZ.
+    /// Возвращает DeviceId, к которому привязана созданная/найденная Dfz.
+    /// </summary>
+    private static async Task<long> EnsureMinimalDeviceWithSingleDfzAsync(VkrItDbContext db)
+    {
+        // 1) object_type: LINE
+        var lineType = await db.ObjectTypes.FirstOrDefaultAsync(x => x.Code == "LINE");
+        if (lineType is null)
+        {
+            lineType = new ObjectType { Code = "LINE", Name = "Линия" };
+            db.ObjectTypes.Add(lineType);
+            await db.SaveChangesAsync();
+        }
+
+        // 2) substations: тестовая
+        var substation = await db.Substations.FirstOrDefaultAsync(x => x.DispatchName == "ПС 500 кВ Тестовая");
+        if (substation is null)
+        {
+            substation = new Substation { DispatchName = "ПС 500 кВ Тестовая" };
+            db.Substations.Add(substation);
+            await db.SaveChangesAsync();
+        }
+
+        // 3) object: VL500_001
+        var obj = await db.Objects.FirstOrDefaultAsync(x => x.Uid == "VL500_001");
+        if (obj is null)
+        {
+            obj = new ObjectTable
+            {
+                ObjectTypeId = lineType.ObjectTypeId,
+                Uid = "VL500_001",
+                DispatchName = "ВЛ 500 кВ №1",
+                IsActive = true,
+                SubstationId = substation.SubstationId
+            };
+            db.Objects.Add(obj);
+            await db.SaveChangesAsync();
+        }
+
+        // 4) device: "Устройство РЗА 1"
+        var device = await db.Devices.FirstOrDefaultAsync(x => x.ObjectId == obj.ObjectId && x.Name == "Устройство РЗА 1");
+        if (device is null)
+        {
+            device = new Device
+            {
+                ObjectId = obj.ObjectId,
+                Name = "Устройство РЗА 1",
+                VtSwitchTrue = false
+            };
+            db.Devices.Add(device);
+            await db.SaveChangesAsync();
+        }
+
+        // 5) dfz: одна запись
+        var dfz = await db.Dfzs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DFZ");
+        if (dfz is null)
+        {
+            dfz = new Dfz
+            {
+                DeviceId = device.DeviceId,
+                Code = "DFZ",
+                Name = "ДФЗ",
+                HazDfz = true,   // <-- это и есть HazDFZ, который читаем из БД
+                State = true     // для демонстрации, что функция "введена"
+            };
+            db.Dfzs.Add(dfz);
+            await db.SaveChangesAsync();
+        }
+
+        return device.DeviceId;
     }
 
     /// <summary>
