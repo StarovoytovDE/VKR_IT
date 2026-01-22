@@ -1,11 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ActionTable = Domain.Entities.ActionTable;
 
 namespace Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Конфигурация таблицы action.
+/// </summary>
 public sealed class ActionConfiguration : IEntityTypeConfiguration<ActionTable>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<ActionTable> builder)
     {
         builder.ToTable("action");
@@ -23,9 +27,5 @@ public sealed class ActionConfiguration : IEntityTypeConfiguration<ActionTable>
             .IsRequired();
 
         builder.Property(x => x.Description);
-
-        builder.HasIndex(x => x.Code)
-            .IsUnique()
-            .HasDatabaseName("uq_action_code");
     }
 }

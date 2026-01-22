@@ -1,12 +1,15 @@
 ﻿using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ObjectTable = Domain.Entities.ObjectTable;
 
 namespace Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Конфигурация таблицы object.
+/// </summary>
 public sealed class ObjectConfiguration : IEntityTypeConfiguration<ObjectTable>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<ObjectTable> builder)
     {
         builder.ToTable("object");
@@ -27,21 +30,25 @@ public sealed class ObjectConfiguration : IEntityTypeConfiguration<ObjectTable>
             .IsRequired();
 
         builder.Property(x => x.IsActive)
-            .HasDefaultValue(true)
             .IsRequired();
 
-        builder.HasIndex(x => x.Uid)
-            .IsUnique()
-            .HasDatabaseName("uq_object_uid");
-
-        builder.HasIndex(x => new { x.ObjectTypeId, x.DispatchName })
-            .IsUnique()
-            .HasDatabaseName("uq_object_type_dispatch_name");
+        builder.Property(x => x.SubstationId)
+            .IsRequired();
 
         builder.HasOne(x => x.ObjectType)
             .WithMany(x => x.Objects)
-            .HasForeignKey(x => x.ObjectTypeId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .HasConstraintName("fk_object_object_type");
+            .HasForeignKey(x => x.ObjectTypeId);
+
+        builder.HasOne(x => x.Substation)
+            .WithMany(x => x.Objects)
+            .HasForeignKey(x => x.SubstationId);
+
+        builder.HasMany(x => x.Devices)
+            .WithOne(x => x.Object)
+            .HasForeignKey(x => x.ObjectId);
+
+        builder.HasMany(x => x.InstructionRequests)
+            .WithOne(x => x.Object)
+            .HasForeignKey(x => x.ObjectId);
     }
 }

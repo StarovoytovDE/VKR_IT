@@ -4,8 +4,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Persistence.Configurations;
 
+/// <summary>
+/// Конфигурация таблицы app_user.
+/// </summary>
 public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<AppUser> builder)
     {
         builder.ToTable("app_user");
@@ -16,17 +20,8 @@ public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(x => x.UserId)
             .UseIdentityByDefaultColumn();
 
-        builder.Property(x => x.Name)
-            .IsRequired();
-
-        builder.Property(x => x.Login)
-            .IsRequired();
-
-        builder.Property(x => x.PasswordHash)
-            .IsRequired();
-
-        builder.HasIndex(x => x.Login)
-            .IsUnique()
-            .HasDatabaseName("uq_app_user_login");
+        builder.Property(x => x.Name).IsRequired();
+        builder.Property(x => x.Login).IsRequired();
+        builder.Property(x => x.PasswordHash).IsRequired();
     }
 }
