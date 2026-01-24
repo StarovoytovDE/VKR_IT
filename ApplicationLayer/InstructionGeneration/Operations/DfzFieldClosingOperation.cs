@@ -29,8 +29,8 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
                 whenFalse: Node<LineOperationCriteria>.Action(null)
             );
 
-        // Общий ромб семейства DFZ вынесен в DfzNodes.
-        // whenFalse здесь по текущей логике ведёт на withdraw.
+        // Ветка whenFalse: устройство НЕ подключено к линейному ТТ -> выводим ДФЗ.
+        // (в текущей логике DFZ выводится, когда нет "линейного ТТ", см. критерии DeviceConnectedToLineCT).
         var enabledBranch =
             DfzNodes.IfDeviceConnectedToLineCT(
                 whenTrue: connectedToLineCtBranch,
@@ -41,16 +41,16 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
     }
 
     /// <summary>
-    /// Определяет, требуется ли вообще перевод цепей напряжения устройства на резервный ТН
-    /// по общим параметрам устройства (без "функциональных" флагов).
+    /// Определяет, требуется ли перевод цепей напряжения устройства на резервный ТН
+    /// по общим параметрам устройства (работаем по place_code, а не по русским строкам).
     /// </summary>
     private static bool IsAnyVtSwitchRequired(LineOperationCriteria c)
     {
         ArgumentNullException.ThrowIfNull(c);
 
         return c.VtSwitchTrue &&
-               !string.IsNullOrWhiteSpace(c.MainVtPlace) &&
-               !string.IsNullOrWhiteSpace(c.ReserveVtPlace) &&
-               !string.Equals(c.MainVtPlace, c.ReserveVtPlace, StringComparison.Ordinal);
+               !string.IsNullOrWhiteSpace(c.MainVtPlaceCode) &&
+               !string.IsNullOrWhiteSpace(c.ReserveVtPlaceCode) &&
+               !string.Equals(c.MainVtPlaceCode, c.ReserveVtPlaceCode, StringComparison.Ordinal);
     }
 }

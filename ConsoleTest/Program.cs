@@ -6,6 +6,7 @@ using ApplicationLayer.InstructionGeneration.Models;
 using ApplicationLayer.InstructionGeneration.Operations;
 using ApplicationLayer.InstructionGeneration.Requests;
 using Domain.Entities;
+using Domain.ReferenceData;
 using Infrastructure.InstructionGeneration.DeviceParams;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -35,16 +36,18 @@ internal static class Program
 
         var deviceId = await EnsureMinimalDeviceWithFunctionsAsync(db);
 
+        // 1) Считываем snapshot (правильная интеграция: reader на устройство)
         var reader = new EfCoreDeviceParamsReader(db);
         var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
 
         Console.WriteLine();
         Console.WriteLine($"Snapshot: DeviceId={snapshot.DeviceId}, ObjectId={snapshot.ObjectId}, Name={snapshot.DeviceName}");
         Console.WriteLine($"Snapshot: VtSwitchTrue={snapshot.VtSwitchTrue}");
-        Console.WriteLine($"Snapshot: VT Main='{snapshot.Vts.Main.Name}', Place='{snapshot.Vts.Main.Place}'");
-        Console.WriteLine($"Snapshot: VT Reserve='{snapshot.Vts.Reserve.Name}', Place='{snapshot.Vts.Reserve.Place}'");
-        Console.WriteLine($"Snapshot: CT Place='{snapshot.CtPlace.Place}'");
+        Console.WriteLine($"Snapshot: VT Main='{snapshot.Vts.Main.Name}', Place='{snapshot.Vts.Main.Place}', PlaceCode='{snapshot.Vts.Main.PlaceCode}'");
+        Console.WriteLine($"Snapshot: VT Reserve='{snapshot.Vts.Reserve.Name}', Place='{snapshot.Vts.Reserve.Place}', PlaceCode='{snapshot.Vts.Reserve.PlaceCode}'");
+        Console.WriteLine($"Snapshot: CT Place='{snapshot.CtPlace.Place}', PlaceCode='{snapshot.CtPlace.PlaceCode}'");
 
+        // 2) Формируем request (то, что задаёт диспетчер через UI)
         var request = new LineOperationRequest
         {
             LineCode = "VL-500-01",
@@ -60,14 +63,19 @@ internal static class Program
             }
         };
 
+        // 3) Собираем criteria
         var builder = new LineOperationCriteriaBuilder();
 
         var deviceObjectId = checked((int)snapshot.ObjectId);
         var criteria = builder.Build(request, deviceObjectId, snapshot);
 
-        // ВРЕМЕННО: технологические/паспортные флаги, которые ещё не заведены в БД как отдельные поля/таблицы.
-        // ВАЖНО: DeviceConnectedToLineCT теперь вычисляется builder-ом из snapshot.CtPlace.Place
-        // и не должен задаваться вручную.
+        Console.WriteLine($"REQ: DFZ={request.FunctionStates.DfzEnabled}, DZL={request.FunctionStates.DzlEnabled}, DZ={request.FunctionStates.DzEnabled}");
+        Console.WriteLine($"CRT: DFZ={criteria.DFZEnabled}, DZL={criteria.DZLEnabled}, DZ={criteria.DZEnabled}");
+
+
+        // 4) Технологические/паспортные флаги (пока задаём вручную, т.к. UI/таблиц ещё нет).
+        // ВАЖНО: LineOperationCriteria — record с init-only свойствами,
+        // поэтому используем with-выражение (иначе CS8852).
         criteria = criteria with
         {
             IsFieldClosingAllowed = true,
@@ -75,9 +83,13 @@ internal static class Program
             NeedDisconnectLineCTFromDZO = true,
             NeedMtzoShinovkaAtoB = false,
 
+            // Эти поля есть в критериях и используются некоторыми ветками правил.
             IsOnlyFunctionInDevice = false,
             HasMtzoShinovka = false,
-            BothLineBreakerCTsOnSubstationSide = false
+            BothLineBreakerCTsOnSubstationSide = false,
+
+            // Если нужно явно управлять веткой DfzFieldClosingOperation:
+            CtRemainsEnergizedOnThisSide = true
         };
 
         Console.WriteLine();
@@ -85,11 +97,12 @@ internal static class Program
         Console.WriteLine($" ActionCode={criteria.ActionCode}, Side={criteria.Side}, LineCode={criteria.LineCode}");
         Console.WriteLine($" IsFieldClosingAllowed={criteria.IsFieldClosingAllowed}");
 
-        Console.WriteLine($" CtPlace={criteria.CtPlace}");
+        Console.WriteLine($" CtPlace={criteria.CtPlace}, CtPlaceCode={criteria.CtPlaceCode}");
         Console.WriteLine($" DeviceConnectedToLineCT={criteria.DeviceConnectedToLineCT}");
 
         Console.WriteLine($" VtSwitchTrue={criteria.VtSwitchTrue}");
-        Console.WriteLine($" MainVtPlace={criteria.MainVtPlace}, ReserveVtPlace={criteria.ReserveVtPlace}");
+        Console.WriteLine($" MainVtPlace={criteria.MainVtPlace}, MainVtPlaceCode={criteria.MainVtPlaceCode}");
+        Console.WriteLine($" ReserveVtPlace={criteria.ReserveVtPlace}, ReserveVtPlaceCode={criteria.ReserveVtPlaceCode}");
 
         Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}");
         Console.WriteLine($" HasDZL={criteria.HasDZL}, DZLEnabled={criteria.DZLEnabled}");
@@ -98,24 +111,24 @@ internal static class Program
         Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
         Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
 
+        // 5) Реестр операций (теперь ActionOperationRegistry требует IEnumerable<IOperation>)
         var operations = new IOperation[]
         {
             new DfzFieldClosingOperation(),
             new DzlFieldClosingOperation(),
             new DzFieldClosingOperation(),
+            new OapvOperation(),
+            new TapvOperation(),
             new UpaskReceiversWithdrawalOperation(),
             new LineVtToReserveVoltageCircuitsTransferOperation(),
             new DisconnectLineCtFromDzoOperation(),
             new MtzoShinovkaAtoBOperation(),
-            new OapvOperation(),
-            new TapvOperation(),
+            new BusbarVtToReserveBusVtVoltageCircuitsTransferOperation(),
 
             new DfzNoFieldClosingOperation(),
             new DzNoFieldClosingOperation(),
             new OapvNoFieldClosingOperation(),
             new TapvNoFieldClosingOperation(),
-
-            new BusbarVtToReserveBusVtVoltageCircuitsTransferOperation(),
 
             new DfzSingleSideWithdrawalOperation(),
         };
@@ -135,6 +148,8 @@ internal static class Program
 
     /// <summary>
     /// Гарантирует наличие минимального набора данных, достаточного для чтения DeviceParamsSnapshot.
+    /// При повторном запуске нормализует place/place_code к каноническому виду,
+    /// чтобы place всегда оставался русским (UI/вывод), а place_code — кодом (алгоритмы).
     /// </summary>
     private static async Task<long> EnsureMinimalDeviceWithFunctionsAsync(VkrItDbContext db)
     {
@@ -187,9 +202,7 @@ internal static class Program
             await db.SaveChangesAsync();
         }
 
-        // CT place — по утверждённому словарю.
-        // Для того, чтобы ветка ДФЗ работала как "не линейный ТТ",
-        // выставляем "Сумма токов выключателей линии".
+        // CT place: "Сумма токов выключателей линии" -> CT_SUM_BREAKERS
         var ctPlace = await db.CtPlaces.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId);
         if (ctPlace is null)
         {
@@ -197,19 +210,33 @@ internal static class Program
             {
                 DeviceId = device.DeviceId,
                 Name = "ТТ (место подключения)",
-                Place = "Сумма токов выключателей линии"
+                Place = "Сумма токов выключателей линии",
+                PlaceCode = PlaceCodes.Ct.SumBreakers
             };
             db.CtPlaces.Add(ctPlace);
             await db.SaveChangesAsync();
         }
-        else if (ctPlace.Place != "Сумма токов выключателей линии")
+        else
         {
-            ctPlace.Place = "Сумма токов выключателей линии";
-            await db.SaveChangesAsync();
+            var changed = false;
+
+            if (!string.Equals(ctPlace.Place, "Сумма токов выключателей линии", StringComparison.Ordinal))
+            {
+                ctPlace.Place = "Сумма токов выключателей линии";
+                changed = true;
+            }
+
+            if (!string.Equals(ctPlace.PlaceCode, PlaceCodes.Ct.SumBreakers, StringComparison.Ordinal))
+            {
+                ctPlace.PlaceCode = PlaceCodes.Ct.SumBreakers;
+                changed = true;
+            }
+
+            if (changed)
+                await db.SaveChangesAsync();
         }
 
-        // VT: по твоей модели Place:
-        // "Линейный ТН", "Шинный ТН", "ТН ошиновки"
+        // VT: основной = линейный, резервный = шинный
         var vtMain = await db.Vts.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Main);
         var vtReserve = await db.Vts.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && !x.Main);
 
@@ -220,15 +247,30 @@ internal static class Program
                 DeviceId = device.DeviceId,
                 Main = true,
                 Name = "ТН линейный",
-                Place = "Линейный ТН"
+                Place = "Линейный ТН",
+                PlaceCode = PlaceCodes.Vt.Line
             };
             db.Vts.Add(vtMain);
             await db.SaveChangesAsync();
         }
-        else if (vtMain.Place != "Линейный ТН")
+        else
         {
-            vtMain.Place = "Линейный ТН";
-            await db.SaveChangesAsync();
+            var changed = false;
+
+            if (!string.Equals(vtMain.Place, "Линейный ТН", StringComparison.Ordinal))
+            {
+                vtMain.Place = "Линейный ТН";
+                changed = true;
+            }
+
+            if (!string.Equals(vtMain.PlaceCode, PlaceCodes.Vt.Line, StringComparison.Ordinal))
+            {
+                vtMain.PlaceCode = PlaceCodes.Vt.Line;
+                changed = true;
+            }
+
+            if (changed)
+                await db.SaveChangesAsync();
         }
 
         if (vtReserve is null)
@@ -238,17 +280,34 @@ internal static class Program
                 DeviceId = device.DeviceId,
                 Main = false,
                 Name = "ТН резервный шинный",
-                Place = "Шинный ТН"
+                Place = "Шинный ТН",
+                PlaceCode = PlaceCodes.Vt.Bus
             };
             db.Vts.Add(vtReserve);
             await db.SaveChangesAsync();
         }
-        else if (vtReserve.Place == "Линейный ТН")
+        else
         {
-            vtReserve.Place = "Шинный ТН";
-            await db.SaveChangesAsync();
+            var changed = false;
+
+            // Нормализация на случай, если ранее в Place попал код.
+            if (!string.Equals(vtReserve.Place, "Шинный ТН", StringComparison.Ordinal))
+            {
+                vtReserve.Place = "Шинный ТН";
+                changed = true;
+            }
+
+            if (!string.Equals(vtReserve.PlaceCode, PlaceCodes.Vt.Bus, StringComparison.Ordinal))
+            {
+                vtReserve.PlaceCode = PlaceCodes.Vt.Bus;
+                changed = true;
+            }
+
+            if (changed)
+                await db.SaveChangesAsync();
         }
 
+        // Функции
         var dfz = await db.Dfzs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DFZ");
         if (dfz is null)
         {
