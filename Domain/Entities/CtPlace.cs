@@ -1,7 +1,7 @@
 ﻿namespace Domain.Entities;
 
 /// <summary>
-/// Возможные места подключения ТТ (CT) для устройства.
+/// Место подключения ТТ (CT) для устройства.
 /// </summary>
 public sealed class CtPlace
 {
@@ -21,9 +21,16 @@ public sealed class CtPlace
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Место подключения (строкой, как в диаграмме place).
+    /// Место подключения (русское значение для UI/выводов).
+    /// Например: "Линейный ТТ до ЛР", "Линейный ТТ после ЛР", "Сумма токов выключателей линии".
     /// </summary>
     public string Place { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Код места подключения (для алгоритмов).
+    /// Например: CT_LINE_BEFORE_LR / CT_LINE_AFTER_LR / CT_SUM_BREAKERS.
+    /// </summary>
+    public string PlaceCode { get; set; } = string.Empty;
 
     /// <summary>
     /// Навигация на устройство.

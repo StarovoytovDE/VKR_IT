@@ -12,7 +12,7 @@ namespace Infrastructure.InstructionGeneration.DeviceParams;
 
 /// <summary>
 /// EF Core-реализация читателя параметров устройства.
-/// Делает отдельные запросы по таблицам функций и отдельный запрос по VT,
+/// Делает отдельные запросы к 1:1 таблицам функций и отдельный запрос по VT,
 /// проверяя, что VT ровно два: один Main=true, второй Main=false.
 /// </summary>
 public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
@@ -22,6 +22,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     /// <summary>
     /// Создаёт читателя параметров устройства на базе EF Core контекста.
     /// </summary>
+    /// <param name="db">Контекст БД.</param>
     public EfCoreDeviceParamsReader(VkrItDbContext db)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -76,30 +77,30 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             CtPlace = new CtPlaceSnapshot
             {
                 Name = ctPlace.Name,
-                Place = ctPlace.Place
+                Place = ctPlace.Place,
+                PlaceCode = ctPlace.PlaceCode
             },
 
             Vts = vtPair,
 
-            // ПАСПОРТ (наличие):
-            Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz, Enabled = dfz.State },
-            Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl, Enabled = dzl.State },
-            Dz = new FunctionStateSnapshot { Has = dz.HazDz, Enabled = dz.State },
+            // ПАСПОРТ (наличие функций):
+            // Оперативное состояние (введено/не введено) задаётся диспетчером в LineOperationRequest.
+            Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz },
+            Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl },
+            Dz = new FunctionStateSnapshot { Has = dz.HazDz },
 
-            Oapv = new OapvStateSnapshot
+            Oapv = new OapvSnapshot
             {
                 State = new FunctionStateSnapshot
                 {
-                    Has = oapv is not null,
-                    Enabled = oapv?.State ?? false
+                    Has = oapv is not null
                 },
                 SwitchOff = oapv?.SwitchOff ?? false
             },
 
             Tapv = new FunctionStateSnapshot
             {
-                Has = tapv is not null,
-                Enabled = tapv?.State ?? false
+                Has = tapv is not null
             },
 
             // Технологические флаги (пока не читаем из БД — позже появится UI управления объектами):
@@ -114,6 +115,8 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     /// Преобразует список VT в пару (Main/Reserve) и валидирует бизнес-правило:
     /// ровно 2 VT, один основной (Main=true), второй резервный (Main=false).
     /// </summary>
+    /// <param name="deviceId">Идентификатор устройства.</param>
+    /// <param name="vts">Список VT устройства.</param>
     private static VtPairSnapshot MapAndValidateVts(long deviceId, List<Vt> vts)
     {
         if (vts.Count != 2)
@@ -133,8 +136,18 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
         return new VtPairSnapshot
         {
-            Main = new VtSnapshot { Name = main.Name, Place = main.Place },
-            Reserve = new VtSnapshot { Name = reserve.Name, Place = reserve.Place }
+            Main = new VtSnapshot
+            {
+                Name = main.Name,
+                Place = main.Place,
+                PlaceCode = main.PlaceCode
+            },
+            Reserve = new VtSnapshot
+            {
+                Name = reserve.Name,
+                Place = reserve.Place,
+                PlaceCode = reserve.PlaceCode
+            }
         };
     }
 }

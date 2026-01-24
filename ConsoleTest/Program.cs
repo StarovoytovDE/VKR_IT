@@ -84,11 +84,17 @@ internal static class Program
         Console.WriteLine("Criteria (summary):");
         Console.WriteLine($" ActionCode={criteria.ActionCode}, Side={criteria.Side}, LineCode={criteria.LineCode}");
         Console.WriteLine($" IsFieldClosingAllowed={criteria.IsFieldClosingAllowed}");
-        Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}, DeviceConnectedToLineCT={criteria.DeviceConnectedToLineCT}, DFZConnectedToLineVT={criteria.DFZConnectedToLineVT}");
+
+        Console.WriteLine($" CtPlace={criteria.CtPlace}");
+        Console.WriteLine($" DeviceConnectedToLineCT={criteria.DeviceConnectedToLineCT}");
+
+        Console.WriteLine($" VtSwitchTrue={criteria.VtSwitchTrue}");
+        Console.WriteLine($" MainVtPlace={criteria.MainVtPlace}, ReserveVtPlace={criteria.ReserveVtPlace}");
+
+        Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}");
         Console.WriteLine($" HasDZL={criteria.HasDZL}, DZLEnabled={criteria.DZLEnabled}");
-        Console.WriteLine($" HasDZ={criteria.HasDZ}, DZEnabled={criteria.DZEnabled}, DZConnectedToLineVT={criteria.DZConnectedToLineVT}");
-        Console.WriteLine($" NeedSwitchVTToReserve={criteria.NeedSwitchVTToReserve}");
-        Console.WriteLine($" NeedSwitchFromLineVTToReserve={criteria.NeedSwitchFromLineVTToReserve}");
+        Console.WriteLine($" HasDZ={criteria.HasDZ}, DZEnabled={criteria.DZEnabled}");
+
         Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
         Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
 

@@ -26,9 +26,16 @@ public sealed class Vt
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Место подключения (строкой, как в диаграмме place).
+    /// Место подключения (русское значение для UI/выводов).
+    /// Например: "Линейный ТН", "Шинный ТН", "ТН ошиновки".
     /// </summary>
     public string Place { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Код места подключения (для алгоритмов).
+    /// Например: VT_LINE / VT_BUS / VT_BUSBAR.
+    /// </summary>
+    public string PlaceCode { get; set; } = string.Empty;
 
     /// <summary>
     /// Навигация на устройство.

@@ -29,8 +29,16 @@ public sealed class CtPlaceConfiguration : IEntityTypeConfiguration<CtPlace>
         builder.Property(x => x.Place)
             .IsRequired();
 
+        builder.Property(x => x.PlaceCode)
+            .IsRequired();
+
         builder.HasOne(x => x.Device)
             .WithMany(x => x.CtPlaces)
             .HasForeignKey(x => x.DeviceId);
+
+        // Обычно ct_place 1:1 на устройство (как у тебя по модели чтения).
+        builder.HasIndex(x => x.DeviceId)
+            .IsUnique()
+            .HasDatabaseName("uq_ct_place_device");
     }
 }

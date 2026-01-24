@@ -1,4 +1,5 @@
-﻿using ApplicationLayer.InstructionGeneration.Criteria;
+﻿using System;
+using ApplicationLayer.InstructionGeneration.Criteria;
 using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 
 namespace ApplicationLayer.InstructionGeneration.Operations;
@@ -16,12 +17,12 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
     {
         var withdraw = DfzNodes.WithdrawByOnlyFunctionRule();
 
-        // Ветка whenTrue: устройство подключено к линейному ТТ -> дальше ваши частные условия.
+        // Ветка whenTrue: устройство подключено к линейному ТТ -> дальше частные условия.
         var connectedToLineCtBranch =
             Node<LineOperationCriteria>.Decision(
                 predicate: c => c.CtRemainsEnergizedOnThisSide,
                 whenTrue: Node<LineOperationCriteria>.Decision(
-                    predicate: c => c.NeedSwitchVTToReserve,
+                    predicate: IsAnyVtSwitchRequired,
                     whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
                     whenFalse: withdraw
                 ),
@@ -29,7 +30,7 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
             );
 
         // Общий ромб семейства DFZ вынесен в DfzNodes.
-        // whenFalse здесь по вашей текущей логике ведёт на withdraw.
+        // whenFalse здесь по текущей логике ведёт на withdraw.
         var enabledBranch =
             DfzNodes.IfDeviceConnectedToLineCT(
                 whenTrue: connectedToLineCtBranch,
@@ -37,5 +38,19 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
             );
 
         return DfzNodes.HasAndEnabled(enabledBranch);
+    }
+
+    /// <summary>
+    /// Определяет, требуется ли вообще перевод цепей напряжения устройства на резервный ТН
+    /// по общим параметрам устройства (без "функциональных" флагов).
+    /// </summary>
+    private static bool IsAnyVtSwitchRequired(LineOperationCriteria c)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+
+        return c.VtSwitchTrue &&
+               !string.IsNullOrWhiteSpace(c.MainVtPlace) &&
+               !string.IsNullOrWhiteSpace(c.ReserveVtPlace) &&
+               !string.Equals(c.MainVtPlace, c.ReserveVtPlace, StringComparison.Ordinal);
     }
 }

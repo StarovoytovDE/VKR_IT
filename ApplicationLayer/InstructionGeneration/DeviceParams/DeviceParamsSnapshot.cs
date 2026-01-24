@@ -22,7 +22,7 @@ public sealed class DeviceParamsSnapshot
     public required string DeviceName { get; init; }
 
     /// <summary>
-    /// Признак истинности логики переключения ТН (как у тебя в таблице device: VtSwitchTrue).
+    /// Признак истинности логики переключения ТН (как в таблице device: VtSwitchTrue).
     /// </summary>
     public required bool VtSwitchTrue { get; init; }
 
@@ -32,7 +32,7 @@ public sealed class DeviceParamsSnapshot
     public required VtPairSnapshot Vts { get; init; }
 
     /// <summary>
-    /// Место подключения ТТ (для критериев «подключено к линейному ТТ» и т.п.).
+    /// Место подключения ТТ (1:1 запись ct_place).
     /// </summary>
     public required CtPlaceSnapshot CtPlace { get; init; }
 
@@ -44,87 +44,68 @@ public sealed class DeviceParamsSnapshot
 
     /// <summary>
     /// Параметры функции ДЗЛ (паспорт: наличие).
-    /// Оперативное состояние задаёт диспетчер.
     /// </summary>
     public required FunctionStateSnapshot Dzl { get; init; }
 
     /// <summary>
     /// Параметры функции ДЗ (паспорт: наличие).
-    /// Оперативное состояние задаёт диспетчер.
     /// </summary>
     public required FunctionStateSnapshot Dz { get; init; }
 
     /// <summary>
-    /// Снимок ОАПВ (паспорт: наличие; оперативное состояние задаёт диспетчер).
+    /// Параметры ОАПВ.
     /// </summary>
-    public required OapvStateSnapshot Oapv { get; init; }
+    public required OapvSnapshot Oapv { get; init; }
 
     /// <summary>
-    /// Параметры функции ТАПВ (паспорт: наличие).
-    /// Оперативное состояние задаёт диспетчер.
+    /// Параметры ТАПВ.
     /// </summary>
     public required FunctionStateSnapshot Tapv { get; init; }
 
-    // =====================================================================
-    // Технологические (паспортные) флаги сценариев / ограничений
-    // =====================================================================
+    /// <summary>
+    /// Технологический флаг: разрешено ли замыкание поля (паспорт/технолог).
+    /// </summary>
+    public bool IsFieldClosingAllowed { get; init; }
 
     /// <summary>
-    /// Допустима ли операция «замыкание поля» для линии/объекта.
-    /// Технологический параметр (задаётся заранее).
+    /// Технологический флаг: требуется ли вывести приёмники УПАСК.
     /// </summary>
-    public required bool IsFieldClosingAllowed { get; init; }
+    public bool NeedDisableUpaskReceivers { get; init; }
 
     /// <summary>
-    /// Требуется ли вывод приёмников УПАСК при выполнении работ.
-    /// Технологический параметр (задаётся заранее).
+    /// Технологический флаг: требуется ли отключить линейный ТТ от ДЗО.
     /// </summary>
-    public required bool NeedDisableUpaskReceivers { get; init; }
+    public bool NeedDisconnectLineCTFromDzo { get; init; }
 
     /// <summary>
-    /// Требуется ли отключение ТТ линии от ДЗО при выполнении работ.
-    /// Технологический параметр (задаётся заранее).
+    /// Технологический флаг: требуется ли переключение МТЗО ошиновки с A на B.
     /// </summary>
-    public required bool NeedDisconnectLineCTFromDzo { get; init; }
-
-    /// <summary>
-    /// Требуется ли перевод МТЗО ошиновки А→Б при выполнении работ.
-    /// Технологический параметр (задаётся заранее).
-    /// </summary>
-    public required bool NeedMtzoShinovkaAtoB { get; init; }
+    public bool NeedMtzoShinovkaAtoB { get; init; }
 }
 
 /// <summary>
-/// Снимок состояния «обычной» функции: наличие + введена/включена.
-/// Наличие — паспорт (технолог), введена/включена — оперативно (диспетчер).
+/// Снимок состояния/наличия функции.
 /// </summary>
 public sealed class FunctionStateSnapshot
 {
     /// <summary>
-    /// Признак наличия функции на устройстве (в твоей БД это HazXxx).
+    /// Признак наличия функции в устройстве (паспорт).
     /// </summary>
     public required bool Has { get; init; }
-
-    /// <summary>
-    /// Признак, что функция введена/включена.
-    /// В итоговых критериях берётся из оперативного запроса диспетчера.
-    /// </summary>
-    public required bool Enabled { get; init; }
 }
 
 /// <summary>
-/// Снимок состояния ОАПВ.
-/// Содержит общее состояние функции (наличие/включена) и специфический признак SwitchOff.
+/// Снимок параметров ОАПВ.
 /// </summary>
-public sealed class OapvStateSnapshot
+public sealed class OapvSnapshot
 {
     /// <summary>
-    /// Общее состояние функции (наличие/введена).
+    /// Параметры наличия (паспорт).
     /// </summary>
     public required FunctionStateSnapshot State { get; init; }
 
     /// <summary>
-    /// Признак «ОАПВ выведено переключателем/ключом» (в твоей БД: SwitchOff).
+    /// Признак «отключено переключателем/ключом» (в БД: SwitchOff).
     /// </summary>
     public required bool SwitchOff { get; init; }
 }
@@ -140,9 +121,14 @@ public sealed class CtPlaceSnapshot
     public required string Name { get; init; }
 
     /// <summary>
-    /// Код/описание места (как в CtPlace.Place).
+    /// Место подключения (русское значение для UI/выводов), как в CtPlace.Place.
     /// </summary>
     public required string Place { get; init; }
+
+    /// <summary>
+    /// Код места подключения (для алгоритмов), как в CtPlace.PlaceCode.
+    /// </summary>
+    public required string PlaceCode { get; init; }
 }
 
 /// <summary>
@@ -172,7 +158,12 @@ public sealed class VtSnapshot
     public required string Name { get; init; }
 
     /// <summary>
-    /// Место подключения (например: LINE / BUS / BUS_RESERVE и т.п.).
+    /// Место подключения (русское значение для UI/выводов), как в Vt.Place.
     /// </summary>
     public required string Place { get; init; }
+
+    /// <summary>
+    /// Код места подключения (для алгоритмов), как в Vt.PlaceCode.
+    /// </summary>
+    public required string PlaceCode { get; init; }
 }
