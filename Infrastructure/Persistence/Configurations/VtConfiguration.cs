@@ -5,43 +5,45 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Конфигурация таблицы vt.
+/// EF Core конфигурация таблицы vt.
 /// </summary>
 public sealed class VtConfiguration : IEntityTypeConfiguration<Vt>
 {
-    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<Vt> builder)
     {
         builder.ToTable("vt");
 
-        builder.HasKey(x => x.VtId)
-            .HasName("pk_vt");
+        builder.HasKey(x => x.VtId);
 
         builder.Property(x => x.VtId)
+            .HasColumnName("vt_id")
             .UseIdentityByDefaultColumn();
 
         builder.Property(x => x.DeviceId)
+            .HasColumnName("device_id")
             .IsRequired();
 
         builder.Property(x => x.Main)
+            .HasColumnName("main")
             .IsRequired();
 
         builder.Property(x => x.Name)
+            .HasColumnName("name")
             .IsRequired();
 
         builder.Property(x => x.Place)
+            .HasColumnName("place")
             .IsRequired();
 
         builder.Property(x => x.PlaceCode)
+            .HasColumnName("place_code")
             .IsRequired();
 
-        builder.HasOne(x => x.Device)
-            .WithMany(x => x.Vts)
-            .HasForeignKey(x => x.DeviceId);
-
-        // Индекс на (device_id, main), чтобы гарантировать ровно 1 main=true и 1 main=false на устройство.
         builder.HasIndex(x => new { x.DeviceId, x.Main })
-            .IsUnique()
-            .HasDatabaseName("uq_vt_device_main");
+            .IsUnique();
+
+        builder.HasOne(x => x.Device)
+            .WithMany(d => d.Vts)
+            .HasForeignKey(x => x.DeviceId);
     }
 }

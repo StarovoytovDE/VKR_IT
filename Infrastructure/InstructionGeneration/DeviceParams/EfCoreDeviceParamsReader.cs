@@ -12,7 +12,7 @@ namespace Infrastructure.InstructionGeneration.DeviceParams;
 
 /// <summary>
 /// EF Core-реализация читателя параметров устройства.
-/// Делает отдельные запросы к 1:1 таблицам функций и отдельный запрос по VT,
+/// Делает отдельные запросы по 1:1 таблицам функций и отдельный запрос по VT,
 /// проверяя, что VT ровно два: один Main=true, второй Main=false.
 /// </summary>
 public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
@@ -22,7 +22,6 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     /// <summary>
     /// Создаёт читателя параметров устройства на базе EF Core контекста.
     /// </summary>
-    /// <param name="db">Контекст БД.</param>
     public EfCoreDeviceParamsReader(VkrItDbContext db)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -35,10 +34,12 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
+        // CT place (ожидаем 1 запись на устройство в вашей текущей модели данных)
         var ctPlace = await _db.CtPlaces
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
+        // VT pair (ожидаем 2 записи: Main=true и Main=false)
         var vts = await _db.Vts
             .AsNoTracking()
             .Where(x => x.DeviceId == deviceId)
@@ -46,6 +47,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
         var vtPair = MapAndValidateVts(deviceId, vts);
 
+        // Функции (1:1 таблицы)
         var dfz = await _db.Dfzs
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
@@ -58,7 +60,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
-        // Для ОАПВ/ТАПВ "наличие" выражено фактом записи (пока нет HazOapv/HazTapv).
+        // Для ОАПВ/ТАПВ «наличие» выражено фактом записи (пока нет HazOapv/HazTapv).
         var oapv = await _db.Oapvs
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
@@ -83,27 +85,28 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
             Vts = vtPair,
 
-            // ПАСПОРТ (наличие функций):
-            // Оперативное состояние (введено/не введено) задаётся диспетчером в LineOperationRequest.
-            Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz },
-            Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl },
-            Dz = new FunctionStateSnapshot { Has = dz.HazDz },
+            // ПАСПОРТ (наличие) + состояние в БД (State)
+            Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz, State = dfz.State },
+            Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl, State = dzl.State },
+            Dz = new FunctionStateSnapshot { Has = dz.HazDz, State = dz.State },
 
-            Oapv = new OapvSnapshot
+            Oapv = new OapvStateSnapshot
             {
                 State = new FunctionStateSnapshot
                 {
-                    Has = oapv is not null
+                    Has = oapv is not null,
+                    State = oapv?.State ?? false
                 },
                 SwitchOff = oapv?.SwitchOff ?? false
             },
 
             Tapv = new FunctionStateSnapshot
             {
-                Has = tapv is not null
+                Has = tapv is not null,
+                State = tapv?.State ?? false
             },
 
-            // Технологические флаги (пока не читаем из БД — позже появится UI управления объектами):
+            // Технологические флаги (пока не читаем из БД — позже появится UI управления объектами)
             IsFieldClosingAllowed = false,
             NeedDisableUpaskReceivers = false,
             NeedDisconnectLineCTFromDzo = false,
@@ -115,8 +118,6 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     /// Преобразует список VT в пару (Main/Reserve) и валидирует бизнес-правило:
     /// ровно 2 VT, один основной (Main=true), второй резервный (Main=false).
     /// </summary>
-    /// <param name="deviceId">Идентификатор устройства.</param>
-    /// <param name="vts">Список VT устройства.</param>
     private static VtPairSnapshot MapAndValidateVts(long deviceId, List<Vt> vts)
     {
         if (vts.Count != 2)
