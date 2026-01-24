@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace ApplicationLayer.InstructionGeneration.DeviceParams;
+﻿namespace ApplicationLayer.InstructionGeneration.DeviceParams;
 
 /// <summary>
 /// Снимок параметров устройства РЗА, необходимый для формирования критериев операций.
@@ -39,38 +37,66 @@ public sealed class DeviceParamsSnapshot
     public required CtPlaceSnapshot CtPlace { get; init; }
 
     /// <summary>
-    /// Параметры функции ДФЗ.
+    /// Параметры функции ДФЗ (паспорт: наличие).
+    /// Оперативное состояние (введено/не введено) задаёт диспетчер через запрос.
     /// </summary>
     public required FunctionStateSnapshot Dfz { get; init; }
 
     /// <summary>
-    /// Параметры функции ДЗЛ.
+    /// Параметры функции ДЗЛ (паспорт: наличие).
+    /// Оперативное состояние задаёт диспетчер.
     /// </summary>
     public required FunctionStateSnapshot Dzl { get; init; }
 
     /// <summary>
-    /// Параметры функции ДЗ.
+    /// Параметры функции ДЗ (паспорт: наличие).
+    /// Оперативное состояние задаёт диспетчер.
     /// </summary>
     public required FunctionStateSnapshot Dz { get; init; }
 
     /// <summary>
-    /// Параметры функции ОАПВ.
+    /// Снимок ОАПВ (паспорт: наличие; оперативное состояние задаёт диспетчер).
     /// </summary>
     public required OapvStateSnapshot Oapv { get; init; }
 
     /// <summary>
-    /// Параметры функции ТАПВ.
+    /// Параметры функции ТАПВ (паспорт: наличие).
+    /// Оперативное состояние задаёт диспетчер.
     /// </summary>
     public required FunctionStateSnapshot Tapv { get; init; }
 
+    // =====================================================================
+    // Технологические (паспортные) флаги сценариев / ограничений
+    // =====================================================================
+
     /// <summary>
-    /// Доп. функции/параметры можно расширять без ломки генератора критериев:
-    /// добавляешь поле сюда + наполнение в reader.
+    /// Допустима ли операция «замыкание поля» для линии/объекта.
+    /// Технологический параметр (задаётся заранее).
     /// </summary>
+    public required bool IsFieldClosingAllowed { get; init; }
+
+    /// <summary>
+    /// Требуется ли вывод приёмников УПАСК при выполнении работ.
+    /// Технологический параметр (задаётся заранее).
+    /// </summary>
+    public required bool NeedDisableUpaskReceivers { get; init; }
+
+    /// <summary>
+    /// Требуется ли отключение ТТ линии от ДЗО при выполнении работ.
+    /// Технологический параметр (задаётся заранее).
+    /// </summary>
+    public required bool NeedDisconnectLineCTFromDzo { get; init; }
+
+    /// <summary>
+    /// Требуется ли перевод МТЗО ошиновки А→Б при выполнении работ.
+    /// Технологический параметр (задаётся заранее).
+    /// </summary>
+    public required bool NeedMtzoShinovkaAtoB { get; init; }
 }
 
 /// <summary>
 /// Снимок состояния «обычной» функции: наличие + введена/включена.
+/// Наличие — паспорт (технолог), введена/включена — оперативно (диспетчер).
 /// </summary>
 public sealed class FunctionStateSnapshot
 {
@@ -80,16 +106,23 @@ public sealed class FunctionStateSnapshot
     public required bool Has { get; init; }
 
     /// <summary>
-    /// Признак, что функция введена/включена (в твоей БД это State).
+    /// Признак, что функция введена/включена.
+    /// В итоговых критериях берётся из оперативного запроса диспетчера.
     /// </summary>
     public required bool Enabled { get; init; }
 }
 
 /// <summary>
-/// Снимок состояния ОАПВ (в твоей БД у ОАПВ есть доп. признак SwitchOff).
+/// Снимок состояния ОАПВ.
+/// Содержит общее состояние функции (наличие/включена) и специфический признак SwitchOff.
 /// </summary>
-public sealed class OapvStateSnapshot : FunctionStateSnapshot
+public sealed class OapvStateSnapshot
 {
+    /// <summary>
+    /// Общее состояние функции (наличие/введена).
+    /// </summary>
+    public required FunctionStateSnapshot State { get; init; }
+
     /// <summary>
     /// Признак «ОАПВ выведено переключателем/ключом» (в твоей БД: SwitchOff).
     /// </summary>

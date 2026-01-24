@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ApplicationLayer.InstructionGeneration.DeviceParams;
+using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,7 +12,7 @@ namespace Infrastructure.InstructionGeneration.DeviceParams;
 
 /// <summary>
 /// EF Core-реализация читателя параметров устройства.
-/// Делает отдельные запросы по «1:1» таблицам и отдельный запрос по VT,
+/// Делает отдельные запросы по таблицам функций и отдельный запрос по VT,
 /// проверяя, что VT ровно два: один Main=true, второй Main=false.
 /// </summary>
 public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
@@ -55,13 +57,14 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
+        // Для ОАПВ/ТАПВ "наличие" выражено фактом записи (пока нет HazOapv/HazTapv).
         var oapv = await _db.Oapvs
             .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
+            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
 
         var tapv = await _db.Tapvs
             .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
+            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
 
         return new DeviceParamsSnapshot
         {
@@ -78,22 +81,32 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
             Vts = vtPair,
 
+            // ПАСПОРТ (наличие):
             Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz, Enabled = dfz.State },
             Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl, Enabled = dzl.State },
             Dz = new FunctionStateSnapshot { Has = dz.HazDz, Enabled = dz.State },
 
             Oapv = new OapvStateSnapshot
             {
-                Has = true, // у ОАПВ в твоей модели «наличие» обычно выражено фактом записи; если у тебя есть HazOapv — поменяй сюда
-                Enabled = oapv.State,
-                SwitchOff = oapv.SwitchOff
+                State = new FunctionStateSnapshot
+                {
+                    Has = oapv is not null,
+                    Enabled = oapv?.State ?? false
+                },
+                SwitchOff = oapv?.SwitchOff ?? false
             },
 
             Tapv = new FunctionStateSnapshot
             {
-                Has = true, // аналогично: если у Tapv есть HazTapv — используй его
-                Enabled = tapv.State
-            }
+                Has = tapv is not null,
+                Enabled = tapv?.State ?? false
+            },
+
+            // Технологические флаги (пока не читаем из БД — позже появится UI управления объектами):
+            IsFieldClosingAllowed = false,
+            NeedDisableUpaskReceivers = false,
+            NeedDisconnectLineCTFromDzo = false,
+            NeedMtzoShinovkaAtoB = false
         };
     }
 
@@ -101,7 +114,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     /// Преобразует список VT в пару (Main/Reserve) и валидирует бизнес-правило:
     /// ровно 2 VT, один основной (Main=true), второй резервный (Main=false).
     /// </summary>
-    private static VtPairSnapshot MapAndValidateVts(long deviceId, System.Collections.Generic.List<Domain.Entities.Vt> vts)
+    private static VtPairSnapshot MapAndValidateVts(long deviceId, List<Vt> vts)
     {
         if (vts.Count != 2)
         {
