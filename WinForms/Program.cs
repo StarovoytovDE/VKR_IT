@@ -1,70 +1,36 @@
-using Infrastructure;
-using Infrastructure.Persistence;
-using Infrastructure.Persistence.Seeding;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Windows.Forms;
+using WinForms.Services;
+using WinForms.UI;
 
-namespace WinForms;
-
-internal static class Program
+namespace WinForms
 {
-    [STAThread]
-    private static async Task Main(string[] args)
+    internal static class Program
     {
-        ApplicationConfiguration.Initialize();
-
-        var builder = Host.CreateApplicationBuilder();
-        builder.Configuration
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-            .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: false)
-            .AddEnvironmentVariables();
-
-        builder.Services.AddInfrastructure(builder.Configuration);
-        builder.Services.AddTransient<Form1>();
-
-        using var host = builder.Build();
-        using var scope = host.Services.CreateScope();
-
-        //       if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
-        //       {
-        //           var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-        //           await seeder.SeedMinimalAsync();
-        //           Console.WriteLine("Seeding done");
-        //           return;
-        //       }
-
-        if (args.Contains("--seed", StringComparer.OrdinalIgnoreCase))
+        /// <summary>
+        /// Главная точка входа приложения.
+        /// </summary>
+        [STAThread]
+        private static void Main()
         {
-            var logPath = Path.Combine(AppContext.BaseDirectory, "seed.log");
+            ApplicationConfiguration.Initialize();
 
-            try
-            {
-                var cs = builder.Configuration.GetConnectionString("VkrIt");
+            using IHost host = Host.CreateDefaultBuilder()
+                .ConfigureServices(services =>
+                {
+                    // TODO: Заменить заглушки на реальные сервисы (Infrastructure/ApplicationLayer).
+                    services.AddSingleton<ILineUiDataService, StubLineUiDataService>();
+                    services.AddSingleton<IInstructionUiService, StubInstructionUiService>();
 
-                File.WriteAllText(logPath,
-                    $"Seed START {DateTimeOffset.Now:O}{Environment.NewLine}" +
-                    $"BaseDir: {AppContext.BaseDirectory}{Environment.NewLine}" +
-                    $"Args: {string.Join(" ", args)}{Environment.NewLine}" +
-                    $"CS: {cs}{Environment.NewLine}");
+                    services.AddTransient<InstructionGenerationForm>();
+                })
+                .Build();
 
-                var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-                await seeder.SeedMinimalAsync();
-
-                File.AppendAllText(logPath, $"Seed DONE {DateTimeOffset.Now:O}{Environment.NewLine}");
-                return;
-            }
-            catch (Exception ex)
-            {
-                File.AppendAllText(logPath, $"Seed FAILED {DateTimeOffset.Now:O}{Environment.NewLine}{ex}{Environment.NewLine}");
-                throw;
-            }
+            using IServiceScope scope = host.Services.CreateScope();
+            var form = scope.ServiceProvider.GetRequiredService<InstructionGenerationForm>();
+            Application.Run(form);
         }
-
-        var dbContext = scope.ServiceProvider.GetRequiredService<VkrItDbContext>();
-        _ = dbContext.Database.CanConnect();
-
-        Application.Run(scope.ServiceProvider.GetRequiredService<Form1>());
     }
 }

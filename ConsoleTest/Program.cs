@@ -34,7 +34,32 @@ internal static class Program
 
         await db.Database.MigrateAsync();
 
-        var deviceId = await EnsureMinimalDeviceWithFunctionsAsync(db);
+        // ВАЖНО:
+        // По умолчанию ConsoleTest НЕ должен сидировать и НЕ должен изменять БД,
+        // иначе вы получаете «почему snapshot не подтягивает изменения» — изменения просто затираются сидом.
+        //
+        // Чтобы явно сидировать тестовые данные, установите переменную окружения:
+        // VKR_IT_CONSOLETEST_SEED=1
+        var shouldSeed = string.Equals(
+            Environment.GetEnvironmentVariable("VKR_IT_CONSOLETEST_SEED"),
+            "1",
+            StringComparison.Ordinal);
+
+        long deviceId;
+        if (shouldSeed)
+        {
+            deviceId = await EnsureMinimalDeviceWithFunctionsAsync(db);
+
+            // После сидирования/нормализации очищаем ChangeTracker,
+            // чтобы дальнейшее чтение не вернуло «старую» tracked-сущность.
+            db.ChangeTracker.Clear();
+        }
+        else
+        {
+            // Работает с тем, что реально лежит в БД.
+            // При необходимости — поменяйте на нужный deviceId.
+            deviceId = 1;
+        }
 
         // 1) Считываем snapshot (правильная интеграция: reader на устройство)
         var reader = new EfCoreDeviceParamsReader(db);
@@ -67,26 +92,13 @@ internal static class Program
             }
         };
 
-        // 3) Собираем criteria
+        // 3) Собираем criteria (БЕЗ ручных with-оверрайдов)
         var builder = new LineOperationCriteriaBuilder();
         var deviceObjectId = checked((int)snapshot.ObjectId);
         var criteria = builder.Build(request, deviceObjectId, snapshot);
 
         Console.WriteLine($"REQ: DFZ={request.FunctionStates.DfzEnabled}, DZL={request.FunctionStates.DzlEnabled}, DZ={request.FunctionStates.DzEnabled}");
         Console.WriteLine($"CRT: DFZ={criteria.DFZEnabled}, DZL={criteria.DZLEnabled}, DZ={criteria.DZEnabled}");
-
-        // 4) Прочие флаги, которые пока не заведены в БД/модель (используются отдельными ветками правил).
-        // ВАЖНО: LineOperationCriteria — record с init-only свойствами, поэтому используем with-выражение.
-        criteria = criteria with
-        {
-            // Эти поля есть в критериях и используются некоторыми ветками правил.
-            IsOnlyFunctionInDevice = false,
-            HasMtzoShinovka = false,
-            BothLineBreakerCTsOnSubstationSide = false,
-
-            // Если нужно явно управлять веткой DfzFieldClosingOperation:
-            CtRemainsEnergizedOnThisSide = true
-        };
 
         Console.WriteLine();
         Console.WriteLine("Criteria (summary):");
@@ -145,6 +157,7 @@ internal static class Program
 
     /// <summary>
     /// Гарантирует наличие минимального набора данных, достаточного для чтения DeviceParamsSnapshot.
+    /// ВНИМАНИЕ: метод используется ТОЛЬКО при VKR_IT_CONSOLETEST_SEED=1.
     /// При повторном запуске нормализует place/place_code к каноническому виду,
     /// чтобы place всегда оставался русским (UI/вывод), а place_code — кодом (алгоритмы).
     /// </summary>
@@ -190,44 +203,17 @@ internal static class Program
                 Name = "Устройство РЗА 1",
 
                 // Технологические параметры устройства (как в целевой архитектуре).
+                // Здесь задаём значения только для первичного наполнения.
                 VtSwitchTrue = true,
                 DzoSwitchTrue = true,
                 UpaskSwitchTrue = true,
-                FieldClosingAllowed = true
+                FieldClosingAllowed = true,
+
+                // Новый флаг — задаём при создании (не трогаем существующие значения при повторных запусках).
+                CtRemainsEnergized = false
             };
             db.Devices.Add(device);
             await db.SaveChangesAsync();
-        }
-        else
-        {
-            var changed = false;
-
-            if (!device.VtSwitchTrue)
-            {
-                device.VtSwitchTrue = true;
-                changed = true;
-            }
-
-            if (!device.DzoSwitchTrue)
-            {
-                device.DzoSwitchTrue = true;
-                changed = true;
-            }
-
-            if (!device.UpaskSwitchTrue)
-            {
-                device.UpaskSwitchTrue = true;
-                changed = true;
-            }
-
-            if (!device.FieldClosingAllowed)
-            {
-                device.FieldClosingAllowed = true;
-                changed = true;
-            }
-
-            if (changed)
-                await db.SaveChangesAsync();
         }
 
         // CT place: "Сумма токов выключателей линии" -> CT_SUM_BREAKERS
@@ -318,7 +304,6 @@ internal static class Program
         {
             var changed = false;
 
-            // Нормализация на случай, если ранее в Place попал код.
             if (!string.Equals(vtReserve.Place, "Шинный ТН", StringComparison.Ordinal))
             {
                 vtReserve.Place = "Шинный ТН";
@@ -411,7 +396,7 @@ internal static class Program
             await db.SaveChangesAsync();
         }
 
-        // МТЗ ошиновки (опционально): если в БД нет записи, создадим с AToBTrue=false (по умолчанию).
+        // МТЗ ошиновки (опционально)
         var mtzBusbar = await db.MtzBusbars.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId);
         if (mtzBusbar is null)
         {
