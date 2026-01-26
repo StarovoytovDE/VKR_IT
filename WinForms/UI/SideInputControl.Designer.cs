@@ -11,6 +11,9 @@
         private System.Windows.Forms.ComboBox comboAction;
         private System.Windows.Forms.FlowLayoutPanel flowDevices;
 
+        /// <summary>
+        /// Освобождает ресурсы.
+        /// </summary>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))

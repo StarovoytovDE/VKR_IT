@@ -45,9 +45,7 @@ namespace WinForms.UI
             comboAction.ValueMember = nameof(UiActionItem.Code);
 
             if (actions.Count > 0)
-            {
                 comboAction.SelectedIndex = 0;
-            }
         }
 
         /// <summary>
@@ -80,14 +78,10 @@ namespace WinForms.UI
         public void ResetInputs()
         {
             if (comboAction.Items.Count > 0)
-            {
                 comboAction.SelectedIndex = 0;
-            }
 
             foreach (var r in _rows)
-            {
                 r.Reset();
-            }
         }
 
         /// <summary>

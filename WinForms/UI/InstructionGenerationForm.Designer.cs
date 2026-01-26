@@ -10,21 +10,24 @@
 
         private System.Windows.Forms.TableLayoutPanel tableMain;
         private System.Windows.Forms.GroupBox grpSideAInput;
-        private System.Windows.Forms.GroupBox grpSideAParams;
-        private System.Windows.Forms.GroupBox grpSideBParams;
+        private System.Windows.Forms.GroupBox grpSideAInstructions;
+        private System.Windows.Forms.GroupBox grpSideBInstructions;
         private System.Windows.Forms.GroupBox grpSideBInput;
 
         private WinForms.UI.SideInputControl sideAControl;
         private WinForms.UI.SideInputControl sideBControl;
 
-        private System.Windows.Forms.RichTextBox txtSideAParams;
-        private System.Windows.Forms.RichTextBox txtSideBParams;
+        private System.Windows.Forms.RichTextBox txtSideAInstructions;
+        private System.Windows.Forms.RichTextBox txtSideBInstructions;
 
         private System.Windows.Forms.Panel panelBottom;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.Button btnGenerate;
         private System.Windows.Forms.RichTextBox txtOutput;
 
+        /// <summary>
+        /// Освобождает ресурсы.
+        /// </summary>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -41,15 +44,15 @@
 
             this.tableMain = new System.Windows.Forms.TableLayoutPanel();
             this.grpSideAInput = new System.Windows.Forms.GroupBox();
-            this.grpSideAParams = new System.Windows.Forms.GroupBox();
-            this.grpSideBParams = new System.Windows.Forms.GroupBox();
+            this.grpSideAInstructions = new System.Windows.Forms.GroupBox();
+            this.grpSideBInstructions = new System.Windows.Forms.GroupBox();
             this.grpSideBInput = new System.Windows.Forms.GroupBox();
 
             this.sideAControl = new WinForms.UI.SideInputControl();
             this.sideBControl = new WinForms.UI.SideInputControl();
 
-            this.txtSideAParams = new System.Windows.Forms.RichTextBox();
-            this.txtSideBParams = new System.Windows.Forms.RichTextBox();
+            this.txtSideAInstructions = new System.Windows.Forms.RichTextBox();
+            this.txtSideBInstructions = new System.Windows.Forms.RichTextBox();
 
             this.panelBottom = new System.Windows.Forms.Panel();
             this.btnReset = new System.Windows.Forms.Button();
@@ -59,8 +62,8 @@
             this.panelTop.SuspendLayout();
             this.tableMain.SuspendLayout();
             this.grpSideAInput.SuspendLayout();
-            this.grpSideAParams.SuspendLayout();
-            this.grpSideBParams.SuspendLayout();
+            this.grpSideAInstructions.SuspendLayout();
+            this.grpSideBInstructions.SuspendLayout();
             this.grpSideBInput.SuspendLayout();
             this.panelBottom.SuspendLayout();
             this.SuspendLayout();
@@ -104,29 +107,29 @@
             // sideAControl
             this.sideAControl.Dock = System.Windows.Forms.DockStyle.Fill;
 
-            // grpSideAParams
-            this.grpSideAParams.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.grpSideAParams.Text = "Параметры стороны A";
-            this.grpSideAParams.Padding = new System.Windows.Forms.Padding(10);
-            this.grpSideAParams.Controls.Add(this.txtSideAParams);
+            // grpSideAInstructions
+            this.grpSideAInstructions.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grpSideAInstructions.Text = "Указания стороны A";
+            this.grpSideAInstructions.Padding = new System.Windows.Forms.Padding(10);
+            this.grpSideAInstructions.Controls.Add(this.txtSideAInstructions);
 
-            // txtSideAParams
-            this.txtSideAParams.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtSideAParams.ReadOnly = true;
-            this.txtSideAParams.WordWrap = true;
-            this.txtSideAParams.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
+            // txtSideAInstructions
+            this.txtSideAInstructions.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtSideAInstructions.ReadOnly = true;
+            this.txtSideAInstructions.WordWrap = true;
+            this.txtSideAInstructions.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
 
-            // grpSideBParams
-            this.grpSideBParams.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.grpSideBParams.Text = "Параметры стороны B";
-            this.grpSideBParams.Padding = new System.Windows.Forms.Padding(10);
-            this.grpSideBParams.Controls.Add(this.txtSideBParams);
+            // grpSideBInstructions
+            this.grpSideBInstructions.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.grpSideBInstructions.Text = "Указания стороны B";
+            this.grpSideBInstructions.Padding = new System.Windows.Forms.Padding(10);
+            this.grpSideBInstructions.Controls.Add(this.txtSideBInstructions);
 
-            // txtSideBParams
-            this.txtSideBParams.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtSideBParams.ReadOnly = true;
-            this.txtSideBParams.WordWrap = true;
-            this.txtSideBParams.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
+            // txtSideBInstructions
+            this.txtSideBInstructions.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtSideBInstructions.ReadOnly = true;
+            this.txtSideBInstructions.WordWrap = true;
+            this.txtSideBInstructions.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
 
             // grpSideBInput
             this.grpSideBInput.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -137,9 +140,10 @@
             // sideBControl
             this.sideBControl.Dock = System.Windows.Forms.DockStyle.Fill;
 
+            // add to tableMain
             this.tableMain.Controls.Add(this.grpSideAInput, 0, 0);
-            this.tableMain.Controls.Add(this.grpSideAParams, 1, 0);
-            this.tableMain.Controls.Add(this.grpSideBParams, 2, 0);
+            this.tableMain.Controls.Add(this.grpSideAInstructions, 1, 0);
+            this.tableMain.Controls.Add(this.grpSideBInstructions, 2, 0);
             this.tableMain.Controls.Add(this.grpSideBInput, 3, 0);
 
             // panelBottom
@@ -185,8 +189,8 @@
             this.panelTop.PerformLayout();
             this.tableMain.ResumeLayout(false);
             this.grpSideAInput.ResumeLayout(false);
-            this.grpSideAParams.ResumeLayout(false);
-            this.grpSideBParams.ResumeLayout(false);
+            this.grpSideAInstructions.ResumeLayout(false);
+            this.grpSideBInstructions.ResumeLayout(false);
             this.grpSideBInput.ResumeLayout(false);
             this.panelBottom.ResumeLayout(false);
             this.ResumeLayout(false);

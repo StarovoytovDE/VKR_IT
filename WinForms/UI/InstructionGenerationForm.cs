@@ -45,6 +45,7 @@ namespace WinForms.UI
         {
             Shown += async (_, __) => await LoadLinesAsync();
             comboLine.SelectedIndexChanged += async (_, __) => await OnLineChangedAsync();
+
             btnReset.Click += (_, __) => ResetAllInputs();
             btnGenerate.Click += async (_, __) => await GenerateAsync();
         }
@@ -90,9 +91,9 @@ namespace WinForms.UI
                 sideAControl.SetDevices(ctx.SideA.Devices);
                 sideBControl.SetDevices(ctx.SideB.Devices);
 
-                txtSideAParams.Text = FormatSideParams(ctx.SideA);
-                txtSideBParams.Text = FormatSideParams(ctx.SideB);
-
+                // При смене линии очищаем указания по сторонам и общий вывод.
+                txtSideAInstructions.Clear();
+                txtSideBInstructions.Clear();
                 txtOutput.Clear();
             }
             catch (Exception ex)
@@ -101,26 +102,13 @@ namespace WinForms.UI
             }
         }
 
-        private static string FormatSideParams(LineSideContext side)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine($"ПС: {side.SubstationName}");
-            sb.AppendLine($"Устройств: {side.Devices.Count}");
-            sb.AppendLine();
-
-            foreach (var d in side.Devices)
-            {
-                sb.AppendLine($"• {d.DeviceName}");
-                sb.AppendLine($"  DeviceId: {d.DeviceId}");
-            }
-
-            return sb.ToString();
-        }
-
         private void ResetAllInputs()
         {
             sideAControl.ResetInputs();
             sideBControl.ResetInputs();
+
+            txtSideAInstructions.Clear();
+            txtSideBInstructions.Clear();
             txtOutput.Clear();
         }
 
@@ -135,8 +123,12 @@ namespace WinForms.UI
             try
             {
                 btnGenerate.Enabled = false;
+
+                txtSideAInstructions.Clear();
+                txtSideBInstructions.Clear();
                 txtOutput.Clear();
 
+                // Ввод диспетчера по сторонам
                 var sideAInput = sideAControl.BuildDispatcherInput(UiSide.A);
                 var sideBInput = sideBControl.BuildDispatcherInput(UiSide.B);
 
@@ -146,8 +138,15 @@ namespace WinForms.UI
                     sideAInput,
                     sideBInput);
 
+                // Генерация
                 var results = await _instructionUiService.GenerateAsync(cmd);
-                txtOutput.Text = FormatResults(results);
+
+                // Центральные боксы: указания по сторонам отдельно
+                txtSideAInstructions.Text = FormatResultsBySide(results, UiSide.A);
+                txtSideBInstructions.Text = FormatResultsBySide(results, UiSide.B);
+
+                // Нижний общий вывод: всё вместе (удобно для копирования/отладки)
+                txtOutput.Text = FormatResultsAll(results);
             }
             catch (Exception ex)
             {
@@ -159,7 +158,41 @@ namespace WinForms.UI
             }
         }
 
-        private static string FormatResults(System.Collections.Generic.IReadOnlyList<DeviceInstructionResult> results)
+        private static string FormatResultsBySide(System.Collections.Generic.IReadOnlyList<DeviceInstructionResult> results, UiSide side)
+        {
+            var sb = new StringBuilder();
+
+            var filtered = results
+                .Where(x => x.Side == side)
+                .OrderBy(x => x.DeviceName)
+                .ToList();
+
+            if (filtered.Count == 0)
+            {
+                sb.AppendLine("(нет данных по стороне)");
+                return sb.ToString();
+            }
+
+            foreach (var r in filtered)
+            {
+                sb.AppendLine($"Указания для устройства — {r.DeviceName}");
+                if (r.Instructions.Count == 0)
+                {
+                    sb.AppendLine("  (нет указаний)");
+                }
+                else
+                {
+                    foreach (var item in r.Instructions)
+                        sb.AppendLine($" - {item}");
+                }
+
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
+        private static string FormatResultsAll(System.Collections.Generic.IReadOnlyList<DeviceInstructionResult> results)
         {
             var sb = new StringBuilder();
 
@@ -173,9 +206,7 @@ namespace WinForms.UI
                 else
                 {
                     foreach (var item in r.Instructions)
-                    {
                         sb.AppendLine($" - {item}");
-                    }
                 }
 
                 sb.AppendLine();
