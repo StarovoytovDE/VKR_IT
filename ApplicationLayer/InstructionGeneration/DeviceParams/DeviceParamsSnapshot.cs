@@ -40,18 +40,20 @@ public sealed class DeviceParamsSnapshot
     public FunctionStateSnapshot Tapv { get; init; } = new();
 
     // =========================
-    // Технологические флаги сценариев (пока могут задаваться вручную / позже из БД)
+    // Технологические флаги сценариев (читаются из device, задаются технологом)
     // =========================
 
-    /// <summary>Разрешено ли замыкание поля (технологический флаг).</summary>
+    /// <summary>Разрешено ли замыкание поля.</summary>
     public bool IsFieldClosingAllowed { get; init; }
 
-    /// <summary>Нужно ли выводить приёмники УПАСК (технологический флаг).</summary>
+    /// <summary>Нужно ли выводить приёмники УПАСК.</summary>
     public bool NeedDisableUpaskReceivers { get; init; }
 
-    /// <summary>Нужно ли отключать токовые цепи линейного ТТ от ДЗО данной ВЛ (технологический флаг).</summary>
+    /// <summary>Нужно ли отключать токовые цепи линейного ТТ от ДЗО данной ВЛ.</summary>
     public bool NeedDisconnectLineCTFromDzo { get; init; }
 
-    /// <summary>ТТ выключателей ВЛ оба остаются под навряжением (технологический флаг).</summary>
+    /// <summary>
+    /// Остаются ли токовые цепи (CT) энергизированными на данной стороне.
+    /// </summary>
     public bool CtRemainsEnergizedOnThisSide { get; init; }
 }

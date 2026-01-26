@@ -1,12 +1,12 @@
 ﻿namespace Domain.Entities;
 
 /// <summary>
-/// МТЗ ошиновки (mtz_busbar), привязанная к устройству.
+/// Функция МТЗ ошиновки, привязанная к устройству.
 /// </summary>
 public sealed class MtzBusbar
 {
     /// <summary>
-    /// Идентификатор МТЗ ошиновки.
+    /// Идентификатор записи МТЗ ошиновки.
     /// </summary>
     public long MtzBusbarId { get; set; }
 

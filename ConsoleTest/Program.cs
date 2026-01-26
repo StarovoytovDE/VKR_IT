@@ -106,7 +106,7 @@ internal static class Program
 
         Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
         Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
-        Console.WriteLine($" NeedMtzoShinovkaAtoB={criteria.NeedMtzoShinovkaAtoB}");
+        Console.WriteLine($" CtRemainsEnergizedOnThisSide={criteria.CtRemainsEnergizedOnThisSide}");
 
         // 5) Реестр операций (ActionOperationRegistry требует IEnumerable<IOperation>)
         var operations = new IOperation[]

@@ -30,10 +30,6 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasColumnName("vt_switch_true")
             .IsRequired();
 
-        builder.HasOne(x => x.Object)
-            .WithMany(x => x.Devices)
-            .HasForeignKey(x => x.ObjectId);
-
         builder.Property(x => x.DzoSwitchTrue)
             .HasColumnName("dzo_switch_true")
             .IsRequired();
@@ -46,8 +42,12 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasColumnName("field_closing_allowed")
             .IsRequired();
 
-    builder.Property(x => x.CtRemainsEnergized)
+        builder.Property(x => x.CtRemainsEnergized)
             .HasColumnName("ct_remains_energized")
             .IsRequired();
+
+        builder.HasOne(x => x.Object)
+            .WithMany(x => x.Devices)
+            .HasForeignKey(x => x.ObjectId);
     }
 }

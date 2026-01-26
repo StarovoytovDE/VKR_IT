@@ -1,7 +1,10 @@
-﻿namespace Domain.Entities;
+﻿using System.Collections.Generic;
+
+namespace Domain.Entities;
 
 /// <summary>
-/// Устройство РЗА, привязанное к объекту линии (object).
+/// Устройство РЗА (привязано к объекту, как правило к линии).
+/// Содержит как паспортные/технологические флаги устройства, так и связи на функции и места измерений.
 /// </summary>
 public sealed class Device
 {
@@ -21,32 +24,31 @@ public sealed class Device
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Признак "переключение ТН выполнено/истина" (как в диаграмме vt_switch_true).
+    /// Признак истинности логики перевода цепей напряжения на резерв (vt_switch_true).
     /// </summary>
     public bool VtSwitchTrue { get; set; }
 
     /// <summary>
-    /// Технологический признак необходимости отключения токовых цепей линейного ТТ от ДЗО данной ВЛ.
-    /// Хранится в device.dzo_switch_true.
+    /// Нужно ли отключать токовые цепи линейного ТТ от ДЗО данной ВЛ (dzo_switch_true).
+    /// Технологический параметр, задаётся технологом.
     /// </summary>
     public bool DzoSwitchTrue { get; set; }
 
     /// <summary>
-    /// Технологический признак необходимости вывода приёмников УПАСК,
-    /// по которым организована передача команд РЗ.
-    /// Хранится в device.upask_switch_true.
+    /// Нужно ли выводить приёмники УПАСК (upask_switch_true).
+    /// Технологический параметр, задаётся технологом.
     /// </summary>
     public bool UpaskSwitchTrue { get; set; }
 
     /// <summary>
-    /// Технологический признак допустимости замыкания поля
-    /// при выполнении операций с ВЛ.
-    /// Хранится в device.field_closing_allowed.
+    /// Разрешено ли замыкание поля (field_closing_allowed).
+    /// Технологический параметр, задаётся технологом.
     /// </summary>
     public bool FieldClosingAllowed { get; set; }
 
     /// <summary>
-    /// ТТ выключателей ВЛ оба остаются под навряжением
+    /// Остаются ли токовые цепи (CT) под напряжением/энергизированными на данной стороне (ct_remains_energized).
+    /// Технологический параметр, задаётся технологом.
     /// </summary>
     public bool CtRemainsEnergized { get; set; }
 
@@ -91,7 +93,7 @@ public sealed class Device
     public ICollection<Tapv> Tapvs { get; set; } = [];
 
     /// <summary>
-    /// МТЗ ошиновки.
+    /// МТЗ ошиновки (как функция/запись, без технологического флага A→B).
     /// </summary>
     public ICollection<MtzBusbar> MtzBusbars { get; set; } = [];
 

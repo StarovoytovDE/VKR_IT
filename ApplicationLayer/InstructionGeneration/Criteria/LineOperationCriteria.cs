@@ -89,12 +89,17 @@ public sealed record LineOperationCriteria
     public bool TAPVEnabled { get; init; }
 
     // =========================
-    // Технологические флаги
+    // Технологические флаги (device)
     // =========================
 
     public bool NeedDisableUpaskReceivers { get; init; }
     public bool NeedDisconnectLineCTFromDZO { get; init; }
-    public bool NeedMtzoShinovkaAtoB { get; init; }
+
+    /// <summary>
+    /// Остаются ли токовые цепи (CT) энергизированными на данной стороне.
+    /// Используется ветками логики, где важно понимать, остаётся ли питание/энергия в токовых цепях на стороне.
+    /// </summary>
     public bool CtRemainsEnergizedOnThisSide { get; init; }
+
     public bool IsFieldClosingAllowed { get; init; }
 }
