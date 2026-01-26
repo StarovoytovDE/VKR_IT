@@ -52,6 +52,6 @@ public sealed class DeviceParamsSnapshot
     /// <summary>Нужно ли отключать токовые цепи линейного ТТ от ДЗО данной ВЛ (технологический флаг).</summary>
     public bool NeedDisconnectLineCTFromDzo { get; init; }
 
-    /// <summary>Нужно ли переключать уставки МТЗ ошиновки A→B (технологический флаг).</summary>
-    public bool NeedMtzoShinovkaAtoB { get; init; }
+    /// <summary>ТТ выключателей ВЛ оба остаются под навряжением (технологический флаг).</summary>
+    public bool CtRemainsEnergizedOnThisSide { get; init; }
 }

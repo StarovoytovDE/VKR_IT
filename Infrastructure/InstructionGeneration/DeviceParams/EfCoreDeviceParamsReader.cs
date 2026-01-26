@@ -65,12 +65,22 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
 
+        var mtzBusbar = await _db.MtzBusbars
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
+
         return new DeviceParamsSnapshot
         {
             DeviceId = device.DeviceId,
             ObjectId = device.ObjectId,
             DeviceName = device.Name,
+
+            // Технологические параметры устройства (задаёт технолог; читаем из device/mtz_busbar).
             VtSwitchTrue = device.VtSwitchTrue,
+            NeedDisconnectLineCTFromDzo = device.DzoSwitchTrue,
+            NeedDisableUpaskReceivers = device.UpaskSwitchTrue,
+            IsFieldClosingAllowed = device.FieldClosingAllowed,
+            CtRemainsEnergizedOnThisSide = device.CtRemainsEnergized,
 
             CtPlace = new CtPlaceSnapshot
             {
@@ -81,6 +91,8 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
             Vts = vtPair,
 
+            // ПАСПОРТ (наличие) + текущее состояние в БД (State).
+            // ВАЖНО: оперативное состояние "введено/не введено" в генерации задаёт диспетчер через LineOperationRequest.FunctionStates.
             Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz, State = dfz.State },
             Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl, State = dzl.State },
             Dz = new FunctionStateSnapshot { Has = dz.HazDz, State = dz.State },
@@ -99,12 +111,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             {
                 Has = tapv is not null,
                 State = tapv?.State ?? false
-            },
-
-            IsFieldClosingAllowed = false,
-            NeedDisableUpaskReceivers = false,
-            NeedDisconnectLineCTFromDzo = false,
-            NeedMtzoShinovkaAtoB = false
+            }
         };
     }
 

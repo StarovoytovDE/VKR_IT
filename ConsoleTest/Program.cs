@@ -43,6 +43,10 @@ internal static class Program
         Console.WriteLine();
         Console.WriteLine($"Snapshot: DeviceId={snapshot.DeviceId}, ObjectId={snapshot.ObjectId}, Name={snapshot.DeviceName}");
         Console.WriteLine($"Snapshot: VtSwitchTrue={snapshot.VtSwitchTrue}");
+        Console.WriteLine($"Snapshot: NeedDisconnectLineCTFromDzo={snapshot.NeedDisconnectLineCTFromDzo}");
+        Console.WriteLine($"Snapshot: NeedDisableUpaskReceivers={snapshot.NeedDisableUpaskReceivers}");
+        Console.WriteLine($"Snapshot: CtRemainsEnergizedOnThisSide={snapshot.CtRemainsEnergizedOnThisSide}");
+        Console.WriteLine($"Snapshot: IsFieldClosingAllowed={snapshot.IsFieldClosingAllowed}");
         Console.WriteLine($"Snapshot: VT Main='{snapshot.Vts.Main.Name}', Place='{snapshot.Vts.Main.Place}', PlaceCode='{snapshot.Vts.Main.PlaceCode}'");
         Console.WriteLine($"Snapshot: VT Reserve='{snapshot.Vts.Reserve.Name}', Place='{snapshot.Vts.Reserve.Place}', PlaceCode='{snapshot.Vts.Reserve.PlaceCode}'");
         Console.WriteLine($"Snapshot: CT Place='{snapshot.CtPlace.Place}', PlaceCode='{snapshot.CtPlace.PlaceCode}'");
@@ -65,24 +69,16 @@ internal static class Program
 
         // 3) Собираем criteria
         var builder = new LineOperationCriteriaBuilder();
-
         var deviceObjectId = checked((int)snapshot.ObjectId);
         var criteria = builder.Build(request, deviceObjectId, snapshot);
 
         Console.WriteLine($"REQ: DFZ={request.FunctionStates.DfzEnabled}, DZL={request.FunctionStates.DzlEnabled}, DZ={request.FunctionStates.DzEnabled}");
         Console.WriteLine($"CRT: DFZ={criteria.DFZEnabled}, DZL={criteria.DZLEnabled}, DZ={criteria.DZEnabled}");
 
-
-        // 4) Технологические/паспортные флаги (пока задаём вручную, т.к. UI/таблиц ещё нет).
-        // ВАЖНО: LineOperationCriteria — record с init-only свойствами,
-        // поэтому используем with-выражение (иначе CS8852).
+        // 4) Прочие флаги, которые пока не заведены в БД/модель (используются отдельными ветками правил).
+        // ВАЖНО: LineOperationCriteria — record с init-only свойствами, поэтому используем with-выражение.
         criteria = criteria with
         {
-            IsFieldClosingAllowed = true,
-            NeedDisableUpaskReceivers = true,
-            NeedDisconnectLineCTFromDZO = true,
-            NeedMtzoShinovkaAtoB = false,
-
             // Эти поля есть в критериях и используются некоторыми ветками правил.
             IsOnlyFunctionInDevice = false,
             HasMtzoShinovka = false,
@@ -110,8 +106,9 @@ internal static class Program
 
         Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
         Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
+        Console.WriteLine($" NeedMtzoShinovkaAtoB={criteria.NeedMtzoShinovkaAtoB}");
 
-        // 5) Реестр операций (теперь ActionOperationRegistry требует IEnumerable<IOperation>)
+        // 5) Реестр операций (ActionOperationRegistry требует IEnumerable<IOperation>)
         var operations = new IOperation[]
         {
             new DfzFieldClosingOperation(),
@@ -191,15 +188,46 @@ internal static class Program
             {
                 ObjectId = obj.ObjectId,
                 Name = "Устройство РЗА 1",
-                VtSwitchTrue = true
+
+                // Технологические параметры устройства (как в целевой архитектуре).
+                VtSwitchTrue = true,
+                DzoSwitchTrue = true,
+                UpaskSwitchTrue = true,
+                FieldClosingAllowed = true
             };
             db.Devices.Add(device);
             await db.SaveChangesAsync();
         }
-        else if (!device.VtSwitchTrue)
+        else
         {
-            device.VtSwitchTrue = true;
-            await db.SaveChangesAsync();
+            var changed = false;
+
+            if (!device.VtSwitchTrue)
+            {
+                device.VtSwitchTrue = true;
+                changed = true;
+            }
+
+            if (!device.DzoSwitchTrue)
+            {
+                device.DzoSwitchTrue = true;
+                changed = true;
+            }
+
+            if (!device.UpaskSwitchTrue)
+            {
+                device.UpaskSwitchTrue = true;
+                changed = true;
+            }
+
+            if (!device.FieldClosingAllowed)
+            {
+                device.FieldClosingAllowed = true;
+                changed = true;
+            }
+
+            if (changed)
+                await db.SaveChangesAsync();
         }
 
         // CT place: "Сумма токов выключателей линии" -> CT_SUM_BREAKERS
@@ -380,6 +408,21 @@ internal static class Program
                 State = true
             };
             db.Tapvs.Add(tapv);
+            await db.SaveChangesAsync();
+        }
+
+        // МТЗ ошиновки (опционально): если в БД нет записи, создадим с AToBTrue=false (по умолчанию).
+        var mtzBusbar = await db.MtzBusbars.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId);
+        if (mtzBusbar is null)
+        {
+            mtzBusbar = new MtzBusbar
+            {
+                DeviceId = device.DeviceId,
+                Code = "MTZ_BUS",
+                Name = "МТЗ ошиновки",
+                State = true
+            };
+            db.MtzBusbars.Add(mtzBusbar);
             await db.SaveChangesAsync();
         }
 

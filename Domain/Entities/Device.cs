@@ -26,6 +26,31 @@ public sealed class Device
     public bool VtSwitchTrue { get; set; }
 
     /// <summary>
+    /// Технологический признак необходимости отключения токовых цепей линейного ТТ от ДЗО данной ВЛ.
+    /// Хранится в device.dzo_switch_true.
+    /// </summary>
+    public bool DzoSwitchTrue { get; set; }
+
+    /// <summary>
+    /// Технологический признак необходимости вывода приёмников УПАСК,
+    /// по которым организована передача команд РЗ.
+    /// Хранится в device.upask_switch_true.
+    /// </summary>
+    public bool UpaskSwitchTrue { get; set; }
+
+    /// <summary>
+    /// Технологический признак допустимости замыкания поля
+    /// при выполнении операций с ВЛ.
+    /// Хранится в device.field_closing_allowed.
+    /// </summary>
+    public bool FieldClosingAllowed { get; set; }
+
+    /// <summary>
+    /// ТТ выключателей ВЛ оба остаются под навряжением
+    /// </summary>
+    public bool CtRemainsEnergized { get; set; }
+
+    /// <summary>
     /// Навигация на объект.
     /// </summary>
     public ObjectTable Object { get; set; } = null!;

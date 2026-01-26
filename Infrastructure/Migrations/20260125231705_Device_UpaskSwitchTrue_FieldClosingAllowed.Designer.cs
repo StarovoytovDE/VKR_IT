@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(VkrItDbContext))]
-    partial class VkrItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125231705_Device_UpaskSwitchTrue_FieldClosingAllowed")]
+    partial class Device_UpaskSwitchTrue_FieldClosingAllowed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -156,10 +159,6 @@ namespace Infrastructure.Migrations
                         .HasColumnName("device_id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("DeviceId"));
-
-                    b.Property<bool>("CtRemainsEnergized")
-                        .HasColumnType("boolean")
-                        .HasColumnName("ct_remains_energized");
 
                     b.Property<bool>("DzoSwitchTrue")
                         .HasColumnType("boolean")
@@ -393,6 +392,10 @@ namespace Infrastructure.Migrations
                         .HasColumnName("mtz_busbar_id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("MtzBusbarId"));
+
+                    b.Property<bool>("AToBTrue")
+                        .HasColumnType("boolean")
+                        .HasColumnName("a_to_b_true");
 
                     b.Property<string>("Code")
                         .IsRequired()

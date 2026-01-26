@@ -33,5 +33,21 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.HasOne(x => x.Object)
             .WithMany(x => x.Devices)
             .HasForeignKey(x => x.ObjectId);
+
+        builder.Property(x => x.DzoSwitchTrue)
+            .HasColumnName("dzo_switch_true")
+            .IsRequired();
+
+        builder.Property(x => x.UpaskSwitchTrue)
+            .HasColumnName("upask_switch_true")
+            .IsRequired();
+
+        builder.Property(x => x.FieldClosingAllowed)
+            .HasColumnName("field_closing_allowed")
+            .IsRequired();
+
+    builder.Property(x => x.CtRemainsEnergized)
+            .HasColumnName("ct_remains_energized")
+            .IsRequired();
     }
 }

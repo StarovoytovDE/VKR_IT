@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(VkrItDbContext))]
-    partial class VkrItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125222938_MtzBusbar_AToBTrue")]
+    partial class MtzBusbar_AToBTrue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -157,18 +160,6 @@ namespace Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("DeviceId"));
 
-                    b.Property<bool>("CtRemainsEnergized")
-                        .HasColumnType("boolean")
-                        .HasColumnName("ct_remains_energized");
-
-                    b.Property<bool>("DzoSwitchTrue")
-                        .HasColumnType("boolean")
-                        .HasColumnName("dzo_switch_true");
-
-                    b.Property<bool>("FieldClosingAllowed")
-                        .HasColumnType("boolean")
-                        .HasColumnName("field_closing_allowed");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -177,10 +168,6 @@ namespace Infrastructure.Migrations
                     b.Property<long>("ObjectId")
                         .HasColumnType("bigint")
                         .HasColumnName("object_id");
-
-                    b.Property<bool>("UpaskSwitchTrue")
-                        .HasColumnType("boolean")
-                        .HasColumnName("upask_switch_true");
 
                     b.Property<bool>("VtSwitchTrue")
                         .HasColumnType("boolean")
@@ -393,6 +380,10 @@ namespace Infrastructure.Migrations
                         .HasColumnName("mtz_busbar_id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("MtzBusbarId"));
+
+                    b.Property<bool>("AToBTrue")
+                        .HasColumnType("boolean")
+                        .HasColumnName("a_to_b_true");
 
                     b.Property<string>("Code")
                         .IsRequired()

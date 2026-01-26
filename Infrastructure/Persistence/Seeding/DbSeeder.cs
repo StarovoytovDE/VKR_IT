@@ -64,7 +64,8 @@ public sealed class DbSeeder
         _ = UpsertDz(device.DeviceId, code: "DZ", name: "ДЗ", haz: true, state: true);
         _ = UpsertOapv(device.DeviceId, code: "OAPV", name: "ОАПВ", switchOff: false, state: true);
         _ = UpsertTapv(device.DeviceId, code: "TAPV", name: "ТАПВ", switchOff: false, state: true);
-        _ = UpsertMtzBusbar(device.DeviceId, code: "MTZ_BUS", name: "МТЗ ошиновки", ctPlace: "Сторона ПС", state: true);
+        _ = UpsertMtzBusbar(device.DeviceId, code: "MTZ_BUS", name: "МТЗ ошиновки", aToBTrue: true, state: true);
+
 
         await _db.SaveChangesAsync(ct);
     }
@@ -268,12 +269,20 @@ public sealed class DbSeeder
     /// <summary>
     /// Добавляет запись МТЗ ошиновки в контекст.
     /// </summary>
-    private MtzBusbar UpsertMtzBusbar(long deviceId, string code, string name, string ctPlace, bool state)
+    private MtzBusbar UpsertMtzBusbar(long deviceId, string code, string name, bool aToBTrue, bool state)
     {
-        var x = new MtzBusbar { DeviceId = deviceId, Code = code, Name = name, CtPlace = ctPlace, State = state };
+        var x = new MtzBusbar
+        {
+            DeviceId = deviceId,
+            Code = code,
+            Name = name,
+            State = state
+        };
+
         _db.MtzBusbars.Add(x);
         return x;
     }
+
 
     private static string ComputeSha256(string input)
     {

@@ -29,10 +29,6 @@ public sealed class MtzBusbarConfiguration : IEntityTypeConfiguration<MtzBusbar>
         builder.Property(x => x.Name)
             .IsRequired();
 
-        builder.Property(x => x.CtPlace)
-            .HasColumnName("ct_place")
-            .IsRequired();
-
         builder.Property(x => x.State)
             .IsRequired();
 

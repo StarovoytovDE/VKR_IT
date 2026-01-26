@@ -26,11 +26,6 @@ public sealed class MtzBusbar
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Место подключения ТТ (ct_place) — строкой, как в диаграмме.
-    /// </summary>
-    public string CtPlace { get; set; } = string.Empty;
-
-    /// <summary>
     /// Состояние (state).
     /// </summary>
     public bool State { get; set; }
