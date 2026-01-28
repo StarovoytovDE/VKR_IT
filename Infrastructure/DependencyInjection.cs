@@ -1,5 +1,5 @@
 ﻿using ApplicationLayer.InstructionGeneration.DeviceParams;
-using Infrastructure.InstructionGeneration.DeviceParams;
+using Infrastructure.InstructionGeneration.Services;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +28,7 @@ public static class DependencyInjection
         {
             throw new InvalidOperationException("Connection string 'VkrIt' not found.");
         }
-
-        services.AddDbContext<VkrItDbContext>(options =>
+        services.AddDbContextFactory<VkrItDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>
                     npgsql.MigrationsAssembly("Infrastructure"))
                 .UseSnakeCaseNamingConvention());

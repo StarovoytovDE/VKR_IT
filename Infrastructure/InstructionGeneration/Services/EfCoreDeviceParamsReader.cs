@@ -3,41 +3,44 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ApplicationLayer.InstructionGeneration.DeviceParams;
-using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.InstructionGeneration.DeviceParams;
+namespace Infrastructure.InstructionGeneration.Services;
 
 /// <summary>
 /// EF Core реализация чтения параметров устройства (DeviceParamsSnapshot).
+/// Для WinForms используется IDbContextFactory, чтобы исключить конкурентное использование одного DbContext.
 /// </summary>
 public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 {
-    private readonly VkrItDbContext _db;
+    private readonly IDbContextFactory<VkrItDbContext> _dbFactory;
 
     /// <summary>
     /// Создаёт reader.
     /// </summary>
-    public EfCoreDeviceParamsReader(VkrItDbContext db)
+    /// <param name="dbFactory">Фабрика DbContext (создаёт новый контекст на каждый вызов).</param>
+    public EfCoreDeviceParamsReader(IDbContextFactory<VkrItDbContext> dbFactory)
     {
-        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _dbFactory = dbFactory ?? throw new ArgumentNullException(nameof(dbFactory));
     }
 
     /// <inheritdoc />
     public async Task<DeviceParamsSnapshot> ReadAsync(long deviceId, CancellationToken ct)
     {
-        var device = await _db.Devices
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var device = await db.Devices
             .AsNoTracking()
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
-        var ctPlace = await _db.CtPlaces
+        var ctPlace = await db.CtPlaces
             .AsNoTracking()
             .Where(x => x.DeviceId == deviceId)
             .OrderByDescending(x => x.CtPlaceId)
             .FirstOrDefaultAsync(ct);
 
-        var vts = await _db.Vts
+        var vts = await db.Vts
             .AsNoTracking()
             .Where(x => x.DeviceId == deviceId)
             .ToListAsync(ct);
@@ -45,11 +48,30 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
         var mainVt = vts.SingleOrDefault(x => x.Main);
         var reserveVt = vts.SingleOrDefault(x => !x.Main);
 
-        var dfz = await _db.Dfzs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
-        var dzl = await _db.Dzls.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
-        var dz = await _db.Dzs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
-        var oapv = await _db.Oapvs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
-        var tapv = await _db.Tapvs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
+        var dfz = await db.Dfzs
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .ToListAsync(ct);
+
+        var dzl = await db.Dzls
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .ToListAsync(ct);
+
+        var dz = await db.Dzs
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .ToListAsync(ct);
+
+        var oapv = await db.Oapvs
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .ToListAsync(ct);
+
+        var tapv = await db.Tapvs
+            .AsNoTracking()
+            .Where(x => x.DeviceId == deviceId)
+            .ToListAsync(ct);
 
         return new DeviceParamsSnapshot
         {

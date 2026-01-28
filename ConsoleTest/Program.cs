@@ -7,7 +7,7 @@ using ApplicationLayer.InstructionGeneration.Operations;
 using ApplicationLayer.InstructionGeneration.Requests;
 using Domain.Entities;
 using Domain.ReferenceData;
-using Infrastructure.InstructionGeneration.DeviceParams;
+using Infrastructure.InstructionGeneration.Services;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
