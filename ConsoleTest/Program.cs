@@ -66,7 +66,7 @@ internal static class Program
         var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
 
         Console.WriteLine();
-        Console.WriteLine($"Snapshot: DeviceId={snapshot.DeviceId}, ObjectId={snapshot.ObjectId}, Name={snapshot.DeviceName}");
+        Console.WriteLine($"Snapshot: DeviceId={snapshot.DeviceId}, LineEndId={snapshot.LineEndId}, Name={snapshot.DeviceName}");
         Console.WriteLine($"Snapshot: VtSwitchTrue={snapshot.VtSwitchTrue}");
         Console.WriteLine($"Snapshot: NeedDisconnectLineCTFromDzo={snapshot.NeedDisconnectLineCTFromDzo}");
         Console.WriteLine($"Snapshot: NeedDisableUpaskReceivers={snapshot.NeedDisableUpaskReceivers}");
@@ -94,8 +94,8 @@ internal static class Program
 
         // 3) Собираем criteria (БЕЗ ручных with-оверрайдов)
         var builder = new LineOperationCriteriaBuilder();
-        var deviceObjectId = checked((int)snapshot.ObjectId);
-        var criteria = builder.Build(request, deviceObjectId, snapshot);
+        var lineEndId = checked((int)snapshot.LineEndId);
+        var criteria = builder.Build(request, lineEndId, snapshot);
 
         Console.WriteLine($"REQ: DFZ={request.FunctionStates.DfzEnabled}, DZL={request.FunctionStates.DzlEnabled}, DZ={request.FunctionStates.DzEnabled}");
         Console.WriteLine($"CRT: DFZ={criteria.DFZEnabled}, DZL={criteria.DZLEnabled}, DZ={criteria.DZEnabled}");
@@ -188,18 +188,17 @@ internal static class Program
                 Uid = "VL500_001",
                 DispatchName = "ВЛ 500 кВ №1",
                 IsActive = true,
-                SubstationId = substation.SubstationId
             };
             db.Objects.Add(obj);
             await db.SaveChangesAsync();
         }
 
-        var device = await db.Devices.FirstOrDefaultAsync(x => x.ObjectId == obj.ObjectId && x.Name == "Устройство РЗА 1");
+        var device = await db.Devices.FirstOrDefaultAsync(x => x.LineEndId == obj.ObjectId && x.Name == "Устройство РЗА 1");
         if (device is null)
         {
             device = new Device
             {
-                ObjectId = obj.ObjectId,
+                LineEndId = obj.ObjectId,
                 Name = "Устройство РЗА 1",
 
                 // Технологические параметры устройства (как в целевой архитектуре).

@@ -1,7 +1,9 @@
 ﻿namespace Domain.Entities;
 
+using System.Collections.Generic;
+
 /// <summary>
-/// Подстанция (справочник), используемая для привязки объектов.
+/// Подстанция (справочник).
 /// </summary>
 public sealed class Substation
 {
@@ -16,7 +18,7 @@ public sealed class Substation
     public string DispatchName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Объекты, относящиеся к подстанции.
+    /// Концы линий, относящиеся к подстанции.
     /// </summary>
-    public ICollection<ObjectTable> Objects { get; set; } = [];
+    public ICollection<LineEnd> LineEnds { get; set; } = [];
 }

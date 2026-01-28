@@ -3,7 +3,7 @@
 namespace Domain.Entities;
 
 /// <summary>
-/// Устройство РЗА (привязано к объекту, как правило к линии).
+/// Устройство РЗА (привязано к концу линии).
 /// Содержит как паспортные/технологические флаги устройства, так и связи на функции и места измерений.
 /// </summary>
 public sealed class Device
@@ -14,9 +14,9 @@ public sealed class Device
     public long DeviceId { get; set; }
 
     /// <summary>
-    /// Идентификатор объекта (как правило, линии), к которому относится устройство.
+    /// Идентификатор конца линии (line_end), к которому относится устройство.
     /// </summary>
-    public long ObjectId { get; set; }
+    public long LineEndId { get; set; }
 
     /// <summary>
     /// Наименование устройства.
@@ -53,9 +53,9 @@ public sealed class Device
     public bool CtRemainsEnergized { get; set; }
 
     /// <summary>
-    /// Навигация на объект.
+    /// Навигация на конец линии.
     /// </summary>
-    public ObjectTable Object { get; set; } = null!;
+    public LineEnd LineEnd { get; set; } = null!;
 
     /// <summary>
     /// Связанные записи ТН (VT).

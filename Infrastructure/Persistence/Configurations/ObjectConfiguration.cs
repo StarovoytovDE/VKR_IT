@@ -32,18 +32,11 @@ public sealed class ObjectConfiguration : IEntityTypeConfiguration<ObjectTable>
         builder.Property(x => x.IsActive)
             .IsRequired();
 
-        builder.Property(x => x.SubstationId)
-            .IsRequired();
-
         builder.HasOne(x => x.ObjectType)
             .WithMany(x => x.Objects)
             .HasForeignKey(x => x.ObjectTypeId);
 
-        builder.HasOne(x => x.Substation)
-            .WithMany(x => x.Objects)
-            .HasForeignKey(x => x.SubstationId);
-
-        builder.HasMany(x => x.Devices)
+        builder.HasMany(x => x.LineEnds)
             .WithOne(x => x.Object)
             .HasForeignKey(x => x.ObjectId);
 

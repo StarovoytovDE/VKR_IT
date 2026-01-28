@@ -30,8 +30,11 @@ public sealed class VkrItDbContext : DbContext
     /// <summary>Подстанции.</summary>
     public DbSet<Substation> Substations => Set<Substation>();
 
-    /// <summary>Объекты.</summary>
+    /// <summary>Объекты (линии).</summary>
     public DbSet<ObjectTable> Objects => Set<ObjectTable>();
+
+    /// <summary>Концы линий (привязка линии к ПС по сторонам A/B).</summary>
+    public DbSet<LineEnd> LineEnds => Set<LineEnd>();
 
     /// <summary>Действия.</summary>
     public DbSet<ActionTable> Actions => Set<ActionTable>();

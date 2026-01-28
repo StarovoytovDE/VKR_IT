@@ -151,7 +151,6 @@ public sealed class DbSeeder
                 DispatchName = dispatchName,
                 IsActive = isActive,
                 ObjectType = objectType,
-                SubstationId = substationId
             };
             _db.Objects.Add(entity);
             return entity;
@@ -160,7 +159,6 @@ public sealed class DbSeeder
         entity.DispatchName = dispatchName;
         entity.IsActive = isActive;
         entity.ObjectTypeId = objectType.ObjectTypeId;
-        entity.SubstationId = substationId;
 
         return entity;
     }
@@ -180,12 +178,12 @@ public sealed class DbSeeder
         return action;
     }
 
-    private async Task<Device> UpsertDeviceAsync(long objectId, string name, bool vtSwitchTrue, CancellationToken ct)
+    private async Task<Device> UpsertDeviceAsync(long lineEndId, string name, bool vtSwitchTrue, CancellationToken ct)
     {
-        var d = await _db.Devices.FirstOrDefaultAsync(x => x.ObjectId == objectId && x.Name == name, ct);
+        var d = await _db.Devices.FirstOrDefaultAsync(x => x.LineEndId == lineEndId && x.Name == name, ct);
         if (d is null)
         {
-            d = new Device { ObjectId = objectId, Name = name, VtSwitchTrue = vtSwitchTrue };
+            d = new Device { LineEndId = lineEndId, Name = name, VtSwitchTrue = vtSwitchTrue };
             _db.Devices.Add(d);
         }
         else

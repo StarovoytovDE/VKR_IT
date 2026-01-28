@@ -20,7 +20,8 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(x => x.DeviceId)
             .UseIdentityByDefaultColumn();
 
-        builder.Property(x => x.ObjectId)
+        builder.Property(x => x.LineEndId)
+            .HasColumnName("line_end_id")
             .IsRequired();
 
         builder.Property(x => x.Name)
@@ -46,8 +47,9 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasColumnName("ct_remains_energized")
             .IsRequired();
 
-        builder.HasOne(x => x.Object)
+        builder.HasOne(x => x.LineEnd)
             .WithMany(x => x.Devices)
-            .HasForeignKey(x => x.ObjectId);
+            .HasForeignKey(x => x.LineEndId)
+            .HasConstraintName("fk_device_line_end");
     }
 }

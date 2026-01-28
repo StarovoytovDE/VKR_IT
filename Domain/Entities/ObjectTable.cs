@@ -1,7 +1,9 @@
 ﻿namespace Domain.Entities;
 
+using System.Collections.Generic;
+
 /// <summary>
-/// Универсальная таблица объектов (линии и т.п.), как в диаграмме object.
+/// Универсальная таблица объектов (в текущей модели — линия), как в диаграмме object.
 /// </summary>
 public sealed class ObjectTable
 {
@@ -31,27 +33,17 @@ public sealed class ObjectTable
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// Идентификатор подстанции.
-    /// </summary>
-    public long SubstationId { get; set; }
-
-    /// <summary>
     /// Навигация на тип объекта.
     /// </summary>
     public ObjectType ObjectType { get; set; } = null!;
 
     /// <summary>
-    /// Навигация на подстанцию.
+    /// Концы линии (A и B) — привязки к подстанциям.
     /// </summary>
-    public Substation Substation { get; set; } = null!;
+    public ICollection<LineEnd> LineEnds { get; set; } = [];
 
     /// <summary>
-    /// Устройства, относящиеся к объекту.
-    /// </summary>
-    public ICollection<Device> Devices { get; set; } = [];
-
-    /// <summary>
-    /// Запросы формирования указаний по объекту.
+    /// Запросы формирования указаний по объекту (линии).
     /// </summary>
     public ICollection<InstructionRequest> InstructionRequests { get; set; } = [];
 }

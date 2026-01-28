@@ -10,7 +10,7 @@ public sealed class DeviceParamsSnapshot
     public long DeviceId { get; init; }
 
     /// <summary>Идентификатор объекта (Object) устройства.</summary>
-    public long ObjectId { get; init; }
+    public long LineEndId { get; init; }
 
     /// <summary>Наименование устройства (для UI/логов).</summary>
     public string DeviceName { get; init; } = string.Empty;
@@ -34,10 +34,10 @@ public sealed class DeviceParamsSnapshot
     public FunctionStateSnapshot Dz { get; init; } = new();
 
     /// <summary>ОАПВ: паспорт/состояние + признак отключения (SwitchOff).</summary>
-    public OapvStateSnapshot Oapv { get; init; } = new();
+    public ApvStateSnapshot Oapv { get; init; } = new();
 
     /// <summary>ТАПВ: паспорт (наличие) и состояние в БД (если нужно).</summary>
-    public FunctionStateSnapshot Tapv { get; init; } = new();
+    public ApvStateSnapshot Tapv { get; init; } = new();
 
     // =========================
     // Технологические флаги сценариев (читаются из device, задаются технологом)

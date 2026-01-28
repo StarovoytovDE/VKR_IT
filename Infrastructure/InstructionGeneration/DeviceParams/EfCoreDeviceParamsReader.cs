@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,16 +10,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Infrastructure.InstructionGeneration.DeviceParams;
 
 /// <summary>
-/// EF Core-реализация читателя параметров устройства.
-/// Делает отдельные запросы по таблицам функций и отдельный запрос по VT,
-/// проверяя, что VT ровно два: один Main=true, второй Main=false.
+/// EF Core реализация чтения параметров устройства (DeviceParamsSnapshot).
 /// </summary>
 public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 {
     private readonly VkrItDbContext _db;
 
     /// <summary>
-    /// Создаёт читателя параметров устройства на базе EF Core контекста.
+    /// Создаёт reader.
     /// </summary>
     public EfCoreDeviceParamsReader(VkrItDbContext db)
     {
@@ -36,116 +33,93 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
         var ctPlace = await _db.CtPlaces
             .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
+            .Where(x => x.DeviceId == deviceId)
+            .OrderByDescending(x => x.CtPlaceId)
+            .FirstOrDefaultAsync(ct);
 
         var vts = await _db.Vts
             .AsNoTracking()
             .Where(x => x.DeviceId == deviceId)
             .ToListAsync(ct);
 
-        var vtPair = MapAndValidateVts(deviceId, vts);
+        var mainVt = vts.SingleOrDefault(x => x.Main);
+        var reserveVt = vts.SingleOrDefault(x => !x.Main);
 
-        var dfz = await _db.Dfzs
-            .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
-
-        var dzl = await _db.Dzls
-            .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
-
-        var dz = await _db.Dzs
-            .AsNoTracking()
-            .SingleAsync(x => x.DeviceId == deviceId, ct);
-
-        var oapv = await _db.Oapvs
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
-
-        var tapv = await _db.Tapvs
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, ct);
+        var dfz = await _db.Dfzs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
+        var dzl = await _db.Dzls.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
+        var dz = await _db.Dzs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
+        var oapv = await _db.Oapvs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
+        var tapv = await _db.Tapvs.AsNoTracking().Where(x => x.DeviceId == deviceId).ToListAsync(ct);
 
         return new DeviceParamsSnapshot
         {
             DeviceId = device.DeviceId,
-            ObjectId = device.ObjectId,
+            LineEndId = device.LineEndId,
             DeviceName = device.Name,
 
             VtSwitchTrue = device.VtSwitchTrue,
 
-            // Технологические параметры (device)
-            NeedDisconnectLineCTFromDzo = device.DzoSwitchTrue,
-            NeedDisableUpaskReceivers = device.UpaskSwitchTrue,
-            IsFieldClosingAllowed = device.FieldClosingAllowed,
-            CtRemainsEnergizedOnThisSide = device.CtRemainsEnergized,
-
             CtPlace = new CtPlaceSnapshot
             {
-                Name = ctPlace.Name,
-                Place = ctPlace.Place,
-                PlaceCode = ctPlace.PlaceCode
+                Name = ctPlace?.Name ?? string.Empty,
+                Place = ctPlace?.Place ?? string.Empty,
+                PlaceCode = ctPlace?.PlaceCode ?? string.Empty
             },
 
-            Vts = vtPair,
+            Vts = new VtPairSnapshot
+            {
+                Main = new VtSnapshot
+                {
+                    Name = mainVt?.Name ?? string.Empty,
+                    Place = mainVt?.Place ?? string.Empty,
+                    PlaceCode = mainVt?.PlaceCode ?? string.Empty
+                },
+                Reserve = new VtSnapshot
+                {
+                    Name = reserveVt?.Name ?? string.Empty,
+                    Place = reserveVt?.Place ?? string.Empty,
+                    PlaceCode = reserveVt?.PlaceCode ?? string.Empty
+                }
+            },
 
-            // ПАСПОРТ (наличие) + состояние в БД (State):
-            Dfz = new FunctionStateSnapshot { Has = dfz.HazDfz, State = dfz.State },
-            Dzl = new FunctionStateSnapshot { Has = dzl.HazDzl, State = dzl.State },
-            Dz = new FunctionStateSnapshot { Has = dz.HazDz, State = dz.State },
+            Dfz = new FunctionStateSnapshot
+            {
+                Has = dfz.Any(x => x.HazDfz),
+                State = dfz.Any(x => x.State)
+            },
+            Dzl = new FunctionStateSnapshot
+            {
+                Has = dzl.Any(x => x.HazDzl),
+                State = dzl.Any(x => x.State)
+            },
+            Dz = new FunctionStateSnapshot
+            {
+                Has = dz.Any(x => x.HazDz),
+                State = dz.Any(x => x.State)
+            },
 
-            Oapv = new OapvStateSnapshot
+            Oapv = new ApvStateSnapshot
             {
                 State = new FunctionStateSnapshot
                 {
-                    Has = oapv is not null,
-                    State = oapv?.State ?? false
+                    State = oapv.Any(x => x.State)
                 },
-                SwitchOff = oapv?.SwitchOff ?? false
+                SwitchOff = oapv.Any(x => x.SwitchOff)
             },
 
-            Tapv = new FunctionStateSnapshot
+            Tapv = new ApvStateSnapshot
             {
-                Has = tapv is not null,
-                State = tapv?.State ?? false
+                State = new FunctionStateSnapshot
+                {
+                    State = tapv.Any(x => x.State)
+                },
+                SwitchOff = tapv.Any(x => x.SwitchOff)
             },
-        };
-    }
 
-    /// <summary>
-    /// Преобразует список VT в пару (Main/Reserve) и валидирует бизнес-правило:
-    /// ровно 2 VT, один основной (Main=true), второй резервный (Main=false).
-    /// </summary>
-    private static VtPairSnapshot MapAndValidateVts(long deviceId, List<Vt> vts)
-    {
-        if (vts.Count != 2)
-        {
-            throw new InvalidOperationException(
-                $"Для устройства deviceId={deviceId} ожидается ровно 2 записи VT (основной и резервный), фактически: {vts.Count}.");
-        }
-
-        var main = vts.SingleOrDefault(x => x.Main);
-        var reserve = vts.SingleOrDefault(x => !x.Main);
-
-        if (main is null || reserve is null)
-        {
-            throw new InvalidOperationException(
-                $"Для устройства deviceId={deviceId} VT должны содержать одну запись Main=true и одну запись Main=false.");
-        }
-
-        return new VtPairSnapshot
-        {
-            Main = new VtSnapshot
-            {
-                Name = main.Name,
-                Place = main.Place,
-                PlaceCode = main.PlaceCode
-            },
-            Reserve = new VtSnapshot
-            {
-                Name = reserve.Name,
-                Place = reserve.Place,
-                PlaceCode = reserve.PlaceCode
-            }
+            IsFieldClosingAllowed = device.FieldClosingAllowed,
+            NeedDisableUpaskReceivers = device.UpaskSwitchTrue,
+            NeedDisconnectLineCTFromDzo = device.DzoSwitchTrue,
+            CtRemainsEnergizedOnThisSide = device.CtRemainsEnergized
         };
     }
 }

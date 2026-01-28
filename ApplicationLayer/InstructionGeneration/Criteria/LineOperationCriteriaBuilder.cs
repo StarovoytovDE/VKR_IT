@@ -55,7 +55,7 @@ public sealed class LineOperationCriteriaBuilder
             HasDZL = snapshot.Dzl.Has,
             HasDZ = snapshot.Dz.Has,
             HasOAPV = snapshot.Oapv.State.Has,
-            HasTAPV = snapshot.Tapv.Has,
+            HasTAPV = snapshot.Tapv.State.Has,
 
             // ОПЕРАТИВНОЕ СОСТОЯНИЕ (введено/не введено) — только из запроса диспетчера
             DFZEnabled = request.FunctionStates.DfzEnabled,
