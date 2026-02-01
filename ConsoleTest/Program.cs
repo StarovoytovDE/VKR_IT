@@ -9,6 +9,9 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,12 +19,20 @@ internal static class Program
 {
     /// <summary>
     /// Точка входа консольного теста генератора указаний.
-    /// Демонстрация «правильного» пайплайна под сценарий
-    /// «Вывод ВЛ с замыканием поля».
+    /// Демонстрация «правильного» пайплайна под сценарий «Вывод ВЛ с замыканием поля».
+    ///
+    /// Поддерживает пакетную генерацию:
+    /// - по подстанции (переменная окружения VKR_IT_SUBSTATION = DispatchName ПС);
+    /// - либо по списку deviceId (VKR_IT_DEVICE_IDS="1,2,3");
+    /// - либо по умолчанию deviceId=1.
+    ///
+    /// Дополнительно:
+    /// - VKR_IT_MAX_DEVICES=3 (ограничение количества устройств при выборе по ПС).
+    /// - VKR_IT_CONSOLETEST_SEED=1 (явный сидинг тестовых данных).
     /// </summary>
     private static async Task Main()
     {
-        Console.WriteLine("=== ConsoleTest: LineWithdrawalWithFieldClosing ===");
+        Console.WriteLine("=== ConsoleTest: Batch instruction generation ===");
 
         var connectionString =
             "Host=localhost;Port=5432;Database=vkr_it;Username=vkr_it_app;Password=VKRitAPP12345671";
@@ -30,11 +41,10 @@ internal static class Program
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("Infrastructure"))
             .UseSnakeCaseNamingConvention();
 
-        // Контекст нужен для миграций/сидирования.
+        // Контекст нужен для миграций/сидирования и для выборки списка устройств.
         await using var db = new VkrItDbContext(optionsBuilder.Options);
 
         // Фабрика нужна для «правильного» чтения snapshot (EfCoreDeviceParamsReader).
-        // В актуальной версии reader должен создавать DbContext сам (через factory).
         IDbContextFactory<VkrItDbContext> dbFactory =
             new PooledDbContextFactory<VkrItDbContext>(optionsBuilder.Options);
 
@@ -51,90 +61,47 @@ internal static class Program
             "1",
             StringComparison.Ordinal);
 
-        long deviceId;
         if (shouldSeed)
         {
-            deviceId = await EnsureMinimalDeviceWithFunctionsAsync(db);
+            _ = await EnsureMinimalDeviceWithFunctionsAsync(db);
 
             // После сидирования/нормализации очищаем ChangeTracker,
             // чтобы дальнейшее чтение не вернуло «старую» tracked-сущность.
             db.ChangeTracker.Clear();
         }
-        else
+
+        // ===== 1) Определяем список устройств для обработки =====
+
+        // ЗАДАЁШЬ ПС ЗДЕСЬ:
+        const string targetSubstationName = "ПС 500 кВ Восход";
+
+        // Сколько устройств выводить (если нужно ограничить).
+        const int maxDevices = 5;
+
+        var deviceIds = await GetDeviceIdsBySubstationAsync(db, targetSubstationName, maxDevices);
+        Console.WriteLine($"Mode: by substation '{targetSubstationName}', devices={deviceIds.Count}");
+
+        if (deviceIds.Count == 0)
         {
-            // Работает с тем, что реально лежит в БД.
-            // При необходимости — поменяйте на нужный deviceId.
-            deviceId = 1;
+            Console.WriteLine($"Устройства не найдены для ПС '{targetSubstationName}'. Проверь точное совпадение DispatchName в БД.");
+            return;
         }
 
-        // 1) Считываем snapshot (правильная интеграция: reader на устройство)
-        var reader = new EfCoreDeviceParamsReader(dbFactory);
-        var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
-
-        Console.WriteLine();
-        Console.WriteLine($"Snapshot: DeviceId={snapshot.DeviceId}, LineEndId={snapshot.LineEndId}, Name={snapshot.DeviceName}");
-        Console.WriteLine($"Snapshot: VtSwitchTrue={snapshot.VtSwitchTrue}");
-        Console.WriteLine($"Snapshot: NeedDisconnectLineCTFromDzo={snapshot.NeedDisconnectLineCTFromDzo}");
-        Console.WriteLine($"Snapshot: NeedDisableUpaskReceivers={snapshot.NeedDisableUpaskReceivers}");
-        Console.WriteLine($"Snapshot: CtRemainsEnergizedOnThisSide={snapshot.CtRemainsEnergizedOnThisSide}");
-        Console.WriteLine($"Snapshot: IsFieldClosingAllowed={snapshot.IsFieldClosingAllowed}");
-        Console.WriteLine($"Snapshot: VT Main='{snapshot.Vts.Main.Name}', Place='{snapshot.Vts.Main.Place}', PlaceCode='{snapshot.Vts.Main.PlaceCode}'");
-        Console.WriteLine($"Snapshot: VT Reserve='{snapshot.Vts.Reserve.Name}', Place='{snapshot.Vts.Reserve.Place}', PlaceCode='{snapshot.Vts.Reserve.PlaceCode}'");
-        Console.WriteLine($"Snapshot: CT Place='{snapshot.CtPlace.Place}', PlaceCode='{snapshot.CtPlace.PlaceCode}'");
-
-        // ОАПВ/ТАПВ: В БД нет Has*, есть только State + SwitchOff.
-        Console.WriteLine($"Snapshot: OAPV State={snapshot.Oapv.State.State}, SwitchOff={snapshot.Oapv.SwitchOff}");
-        Console.WriteLine($"Snapshot: TAPV State={snapshot.Tapv.State.State}, SwitchOff={snapshot.Tapv.SwitchOff}");
-
-        // 2) Формируем request (то, что задаёт диспетчер через UI)
-        var request = new LineOperationRequest
+        if (deviceIds.Count == 0)
         {
-            LineCode = "VL-500-01",
-            Side = SideOfLine.A,
-            ActionCode = ActionCode.LineWithdrawalWithFieldClosing,
-            FunctionStates = new FunctionStatesRequest
-            {
-                DfzEnabled = true,
-                DzlEnabled = true,
-                DzEnabled = true,
-                OapvEnabled = true,
-                TapvEnabled = true
-            }
-        };
+            Console.WriteLine("Устройства не найдены. Проверьте VKR_IT_SUBSTATION / VKR_IT_DEVICE_IDS.");
+            return;
+        }
 
-        // 3) Собираем criteria (БЕЗ ручных with-оверрайдов)
-        var builder = new LineOperationCriteriaBuilder();
-        var lineEndId = checked((int)snapshot.LineEndId);
-        var criteria = builder.Build(request, lineEndId, snapshot);
+        // ===== 2) Инициализируем «пайплайн генерации» один раз =====
 
-        Console.WriteLine($"REQ: DFZ={request.FunctionStates.DfzEnabled}, DZL={request.FunctionStates.DzlEnabled}, DZ={request.FunctionStates.DzEnabled}");
-        Console.WriteLine($"CRT: DFZ={criteria.DFZEnabled}, DZL={criteria.DZLEnabled}, DZ={criteria.DZEnabled}");
+        // Reader: читает агрегированный снимок параметров устройства из БД.
+        var reader = new EfCoreDeviceParamsReader(dbFactory);
 
-        Console.WriteLine();
-        Console.WriteLine("Criteria (summary):");
-        Console.WriteLine($" ActionCode={criteria.ActionCode}, Side={criteria.Side}, LineCode={criteria.LineCode}");
-        Console.WriteLine($" IsFieldClosingAllowed={criteria.IsFieldClosingAllowed}");
+        // Criteria builder: строит LineOperationCriteria из запроса диспетчера + snapshot.
+        var criteriaBuilder = new LineOperationCriteriaBuilder();
 
-        Console.WriteLine($" CtPlace={criteria.CtPlace}, CtPlaceCode={criteria.CtPlaceCode}");
-        Console.WriteLine($" DeviceConnectedToLineCT={criteria.DeviceConnectedToLineCT}");
-
-        Console.WriteLine($" VtSwitchTrue={criteria.VtSwitchTrue}");
-        Console.WriteLine($" MainVtName={criteria.MainVtName}, MainVtPlace={criteria.MainVtPlace}, MainVtPlaceCode={criteria.MainVtPlaceCode}");
-        Console.WriteLine($" ReserveVtName={criteria.ReserveVtName}, ReserveVtPlace={criteria.ReserveVtPlace}, ReserveVtPlaceCode={criteria.ReserveVtPlaceCode}");
-
-        Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}");
-        Console.WriteLine($" HasDZL={criteria.HasDZL}, DZLEnabled={criteria.DZLEnabled}");
-        Console.WriteLine($" HasDZ={criteria.HasDZ}, DZEnabled={criteria.DZEnabled}");
-
-        // ОАПВ/ТАПВ по новой схеме:
-        Console.WriteLine($" OAPV: Enabled={criteria.OAPVEnabled}, State={criteria.OAPVState}, SwitchOff={criteria.OAPVSwitchOff}");
-        Console.WriteLine($" TAPV: Enabled={criteria.TAPVEnabled}, State={criteria.TAPVState}, SwitchOff={criteria.TAPVSwitchOff}");
-
-        Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
-        Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
-        Console.WriteLine($" CtRemainsEnergizedOnThisSide={criteria.CtRemainsEnergizedOnThisSide}");
-
-        // 5) Реестр операций (ActionOperationRegistry требует IEnumerable<IOperation>)
+        // Реестр операций.
         var operations = new IOperation[]
         {
             new DfzFieldClosingOperation(),
@@ -161,14 +128,140 @@ internal static class Program
         IActionOperationRegistry registry = new ActionOperationRegistry(operations);
         var generator = new InstructionGenerator(registry);
 
+        // ===== 3) Генерируем для каждого устройства подряд =====
         Console.WriteLine();
-        Console.WriteLine("=== Generate ===");
-        var instructions = generator.Generate(criteria);
-        PrintResult(instructions);
+        Console.WriteLine("=== Generate (batch) ===");
+
+        foreach (var deviceId in deviceIds)
+        {
+            Console.WriteLine();
+            Console.WriteLine(new string('=', 90));
+
+            // 1) snapshot
+            var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
+
+            // Попробуем корректно определить сторону A/B по LineEnd.SideCode (если есть).
+            var side = await ResolveSideOfLineAsync(db, snapshot.LineEndId);
+
+            Console.WriteLine($"Device: id={snapshot.DeviceId}, lineEndId={snapshot.LineEndId}, name='{snapshot.DeviceName}', side={side}");
+
+            // 2) request (то, что задаёт диспетчер через UI)
+            var request = new LineOperationRequest
+            {
+                LineCode = "VL-500-01",
+                Side = side,
+                ActionCode = ActionCode.LineWithdrawalWithFieldClosing,
+                FunctionStates = new FunctionStatesRequest
+                {
+                    DfzEnabled = true,
+                    DzlEnabled = true,
+                    DzEnabled = true,
+                    OapvEnabled = true,
+                    TapvEnabled = true
+                }
+            };
+
+            // 3) criteria
+            var criteria = criteriaBuilder.Build(request, deviceObjectId: (int)deviceId, snapshot);
+
+            // 4) generate
+            var instructions = generator.Generate(criteria);
+
+            // 5) print
+            PrintResult(instructions);
+        }
 
         Console.WriteLine();
         Console.WriteLine("=== End ===");
         Console.ReadKey();
+    }
+
+    /// <summary>
+    /// Возвращает идентификаторы устройств, относящихся к подстанции (по DispatchName).
+    /// Связь: device.line_end_id -> line_end.substation_id.
+    /// </summary>
+    private static async Task<IReadOnlyList<long>> GetDeviceIdsBySubstationAsync(
+        VkrItDbContext db,
+        string substationDispatchName,
+        int maxDevices)
+    {
+        var substationId = await db.Substations
+            .AsNoTracking()
+            .Where(s => s.DispatchName == substationDispatchName)
+            .Select(s => s.SubstationId)
+            .FirstOrDefaultAsync();
+
+        if (substationId == 0)
+            return Array.Empty<long>();
+
+        // join Devices -> LineEnds, фильтр по SubstationId
+        var ids = await db.Devices
+            .AsNoTracking()
+            .Join(
+                db.LineEnds.AsNoTracking(),
+                d => d.LineEndId,
+                le => le.LineEndId,
+                (d, le) => new { d.DeviceId, le.SubstationId })
+            .Where(x => x.SubstationId == substationId)
+            .OrderBy(x => x.DeviceId)
+            .Select(x => x.DeviceId)
+            .Take(maxDevices)
+            .ToListAsync();
+
+        return ids;
+    }
+
+    /// <summary>
+    /// Определяет сторону линии (A/B) по LineEnd.SideCode.
+    /// Если определить не удалось — возвращает A.
+    /// </summary>
+    private static async Task<SideOfLine> ResolveSideOfLineAsync(VkrItDbContext db, long lineEndId)
+    {
+        var sideCode = await db.LineEnds
+            .AsNoTracking()
+            .Where(x => x.LineEndId == lineEndId)
+            .Select(x => x.SideCode)
+            .FirstOrDefaultAsync();
+
+        if (string.Equals(sideCode, "B", StringComparison.OrdinalIgnoreCase))
+            return SideOfLine.B;
+
+        return SideOfLine.A;
+    }
+
+    /// <summary>
+    /// Читает int из переменной окружения, иначе возвращает defaultValue.
+    /// </summary>
+    private static int ReadIntFromEnv(string envName, int defaultValue)
+    {
+        var raw = Environment.GetEnvironmentVariable(envName);
+        if (string.IsNullOrWhiteSpace(raw))
+            return defaultValue;
+
+        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : defaultValue;
+    }
+
+    /// <summary>
+    /// Читает список deviceId из переменной окружения VKR_IT_DEVICE_IDS формата "1,2,3".
+    /// Некорректные значения игнорируются.
+    /// </summary>
+    private static IReadOnlyList<long> ReadDeviceIdsFromEnv(string envName)
+    {
+        var raw = Environment.GetEnvironmentVariable(envName);
+        if (string.IsNullOrWhiteSpace(raw))
+            return Array.Empty<long>();
+
+        var ids = new List<long>();
+
+        foreach (var token in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (long.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) && id > 0)
+                ids.Add(id);
+        }
+
+        return ids;
     }
 
     /// <summary>
@@ -316,31 +409,12 @@ internal static class Program
             {
                 DeviceId = device.DeviceId,
                 Main = true,
-                Name = "ТН линейный",
+                Name = "Main1",
                 Place = "Линейный ТН",
                 PlaceCode = PlaceCodes.Vt.Line
             };
             db.Vts.Add(vtMain);
             await db.SaveChangesAsync();
-        }
-        else
-        {
-            var changed = false;
-
-            if (!string.Equals(vtMain.Place, "Линейный ТН", StringComparison.Ordinal))
-            {
-                vtMain.Place = "Линейный ТН";
-                changed = true;
-            }
-
-            if (!string.Equals(vtMain.PlaceCode, PlaceCodes.Vt.Line, StringComparison.Ordinal))
-            {
-                vtMain.PlaceCode = PlaceCodes.Vt.Line;
-                changed = true;
-            }
-
-            if (changed)
-                await db.SaveChangesAsync();
         }
 
         if (vtReserve is null)
@@ -349,45 +423,19 @@ internal static class Program
             {
                 DeviceId = device.DeviceId,
                 Main = false,
-                Name = "ТН резервный шинный",
+                Name = "NotMain1",
                 Place = "Шинный ТН",
                 PlaceCode = PlaceCodes.Vt.Bus
             };
             db.Vts.Add(vtReserve);
             await db.SaveChangesAsync();
         }
-        else
-        {
-            var changed = false;
 
-            if (!string.Equals(vtReserve.Place, "Шинный ТН", StringComparison.Ordinal))
-            {
-                vtReserve.Place = "Шинный ТН";
-                changed = true;
-            }
-
-            if (!string.Equals(vtReserve.PlaceCode, PlaceCodes.Vt.Bus, StringComparison.Ordinal))
-            {
-                vtReserve.PlaceCode = PlaceCodes.Vt.Bus;
-                changed = true;
-            }
-
-            if (changed)
-                await db.SaveChangesAsync();
-        }
-
-        // Функции (минимально)
+        // ДФЗ/ДЗЛ/ДЗ (минимально)
         var dfz = await db.Dfzs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DFZ");
         if (dfz is null)
         {
-            dfz = new Dfz
-            {
-                DeviceId = device.DeviceId,
-                Code = "DFZ",
-                Name = "ДФЗ",
-                HazDfz = true,
-                State = true
-            };
+            dfz = new Dfz { DeviceId = device.DeviceId, Code = "DFZ", Name = "ДФЗ", HazDfz = true, State = true };
             db.Dfzs.Add(dfz);
             await db.SaveChangesAsync();
         }
@@ -395,14 +443,7 @@ internal static class Program
         var dzl = await db.Dzls.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DZL");
         if (dzl is null)
         {
-            dzl = new Dzl
-            {
-                DeviceId = device.DeviceId,
-                Code = "DZL",
-                Name = "ДЗЛ",
-                HazDzl = true,
-                State = true
-            };
+            dzl = new Dzl { DeviceId = device.DeviceId, Code = "DZL", Name = "ДЗЛ", HazDzl = true, State = true };
             db.Dzls.Add(dzl);
             await db.SaveChangesAsync();
         }
@@ -410,14 +451,7 @@ internal static class Program
         var dz = await db.Dzs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DZ");
         if (dz is null)
         {
-            dz = new Dz
-            {
-                DeviceId = device.DeviceId,
-                Code = "DZ",
-                Name = "ДЗ",
-                HazDz = true,
-                State = true
-            };
+            dz = new Dz { DeviceId = device.DeviceId, Code = "DZ", Name = "ДЗ", HazDz = true, State = true };
             db.Dzs.Add(dz);
             await db.SaveChangesAsync();
         }
@@ -425,14 +459,7 @@ internal static class Program
         var oapv = await db.Oapvs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "OAPV");
         if (oapv is null)
         {
-            oapv = new Oapv
-            {
-                DeviceId = device.DeviceId,
-                Code = "OAPV",
-                Name = "ОАПВ",
-                SwitchOff = true,
-                State = true
-            };
+            oapv = new Oapv { DeviceId = device.DeviceId, Code = "OAPV", Name = "ОАПВ", SwitchOff = false, State = true };
             db.Oapvs.Add(oapv);
             await db.SaveChangesAsync();
         }
@@ -440,14 +467,7 @@ internal static class Program
         var tapv = await db.Tapvs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "TAPV");
         if (tapv is null)
         {
-            tapv = new Tapv
-            {
-                DeviceId = device.DeviceId,
-                Code = "TAPV",
-                Name = "ТАПВ",
-                SwitchOff = true,
-                State = true
-            };
+            tapv = new Tapv { DeviceId = device.DeviceId, Code = "TAPV", Name = "ТАПВ", SwitchOff = false, State = true };
             db.Tapvs.Add(tapv);
             await db.SaveChangesAsync();
         }
@@ -456,13 +476,7 @@ internal static class Program
         var mtzBusbar = await db.MtzBusbars.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId);
         if (mtzBusbar is null)
         {
-            mtzBusbar = new MtzBusbar
-            {
-                DeviceId = device.DeviceId,
-                Code = "MTZ_BUS",
-                Name = "МТЗ ошиновки",
-                State = true
-            };
+            mtzBusbar = new MtzBusbar { DeviceId = device.DeviceId, Code = "MTZ_BUS", Name = "МТЗ ошиновки", State = true };
             db.MtzBusbars.Add(mtzBusbar);
             await db.SaveChangesAsync();
         }
@@ -473,7 +487,7 @@ internal static class Program
     /// <summary>
     /// Печатает список сформированных указаний в консоль.
     /// </summary>
-    private static void PrintResult(System.Collections.Generic.IReadOnlyList<string> instructions)
+    private static void PrintResult(IReadOnlyList<string> instructions)
     {
         if (instructions.Count == 0)
         {
