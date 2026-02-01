@@ -31,9 +31,9 @@ public sealed class DisconnectLineCtFromDzoOperation : DecisionTreeOperationBase
             whenTrue: DT.Decision(
                 predicate: c => c.NeedDisconnectLineCTFromDZO,
                 whenTrue: DT.Action(InstructionTexts.DisconnectLineCtFromDzo),
-                whenFalse: DT.Action(null)
+                whenFalse: DT.NoAction()
             ),
-            whenFalse: DT.Action(null)
+            whenFalse: DT.NoAction()
         );
     }
 }

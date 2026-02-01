@@ -57,11 +57,17 @@ public sealed class LineOperationCriteria
     /// <summary>Признак истинности логики перевода цепей напряжения на резерв.</summary>
     public bool VtSwitchTrue { get; init; }
 
+    /// <summary>Имя основного ТН (для подстановки в текст указания).</summary>
+    public string MainVtName { get; init; } = string.Empty;
+
     /// <summary>Русское место подключения основного ТН (для UI/логов).</summary>
     public string MainVtPlace { get; init; } = string.Empty;
 
     /// <summary>Код места подключения основного ТН (для алгоритмов).</summary>
     public string MainVtPlaceCode { get; init; } = string.Empty;
+
+    /// <summary>Имя резервного ТН (для подстановки в текст указания).</summary>
+    public string ReserveVtName { get; init; } = string.Empty;
 
     /// <summary>Русское место подключения резервного ТН (для UI/логов).</summary>
     public string ReserveVtPlace { get; init; } = string.Empty;

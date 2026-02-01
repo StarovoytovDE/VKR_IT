@@ -18,9 +18,9 @@ public static class OapvNodes
             whenTrue: Node<LineOperationCriteria>.Decision(
                 predicate: c => c.OAPVState,
                 whenTrue: whenTrue,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction() 
         );
 
     /// <summary>
@@ -31,7 +31,7 @@ public static class OapvNodes
         => Node<LineOperationCriteria>.Decision(
             predicate: c => c.OAPVSwitchOff,
             whenTrue: whenTrue,
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
     /// <summary>

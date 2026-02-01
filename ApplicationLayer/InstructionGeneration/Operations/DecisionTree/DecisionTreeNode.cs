@@ -27,6 +27,18 @@ public abstract class Node<TCriteria>
     /// </summary>
     public static Node<TCriteria> Action(string? output)
         => new ActionNode<TCriteria>(output);
+
+    /// <summary>
+    /// Создаёт узел-действие (лист дерева), вычисляющий результат динамически по критериям.
+    /// </summary>
+    public static Node<TCriteria> Action(Func<TCriteria, string?> outputFactory)
+        => new FuncActionNode<TCriteria>(outputFactory);
+
+    /// <summary>
+    /// Создаёт узел-действие «ничего не делать» (возвращает null).
+    /// </summary>
+    public static Node<TCriteria> NoAction()
+        => new ActionNode<TCriteria>(null);
 }
 
 /// <summary>
@@ -74,3 +86,23 @@ public sealed class ActionNode<TCriteria> : Node<TCriteria>
     /// <inheritdoc />
     public override string? Eval(TCriteria criteria) => _output;
 }
+
+/// <summary>
+/// Узел-действие (лист дерева), вычисляющий результат по критериям.
+/// </summary>
+public sealed class FuncActionNode<TCriteria> : Node<TCriteria>
+{
+    private readonly Func<TCriteria, string?> _outputFactory;
+
+    /// <summary>
+    /// Создаёт узел-действие с фабрикой результата.
+    /// </summary>
+    public FuncActionNode(Func<TCriteria, string?> outputFactory)
+    {
+        _outputFactory = outputFactory ?? throw new ArgumentNullException(nameof(outputFactory));
+    }
+
+    /// <inheritdoc />
+    public override string? Eval(TCriteria criteria) => _outputFactory(criteria);
+}
+

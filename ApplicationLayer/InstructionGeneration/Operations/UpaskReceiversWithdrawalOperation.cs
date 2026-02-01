@@ -25,7 +25,7 @@ public sealed class UpaskReceiversWithdrawalOperation : DecisionTreeOperationBas
         return DT.Decision(
             predicate: c => c.NeedDisableUpaskReceivers,
             whenTrue: DT.Action(InstructionTexts.WithdrawUpaskReceiversForRzCommands),
-            whenFalse: DT.Action(null)
+            whenFalse: DT.NoAction()
         );
     }
 }

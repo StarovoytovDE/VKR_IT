@@ -21,7 +21,7 @@ public sealed class DfzSingleSideWithdrawalOperation : DecisionTreeOperationBase
         var enabledBranch =
             DfzNodes.IfDeviceConnectedToLineCT(
                 whenTrue: withdraw,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             );
 
         return DfzNodes.HasAndEnabled(enabledBranch);

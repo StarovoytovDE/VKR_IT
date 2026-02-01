@@ -1,8 +1,7 @@
 ﻿namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
-/// Единые коды операций.
-/// Используются для конфигурации соответствия ActionCode → набор операций.
+/// Коды операций генерации указаний.
 /// </summary>
 public static class OperationCodes
 {
@@ -25,10 +24,10 @@ public static class OperationCodes
     public const string UpaskReceiversWithdrawal = "UPASK_RECEIVERS_WITHDRAWAL";
 
     /// <summary>
-    /// Перевод цепей напряжения с линейного ТН на резервный (для замыкания поля).
+    /// Универсальный перевод цепей напряжения с основного ТН на резервный ТН (по параметрам Main/Reserve VT).
     /// </summary>
-    public const string LineVtToReserveVoltageCircuitsTransfer = 
-                                "LINE_VT_TO_RESERVE_VOLTAGE_CIRCUITS_TRANSFER";
+    public const string VtVoltageCircuitsTransfer =
+        "VT_VOLTAGE_CIRCUITS_TRANSFER";
 
     /// <summary>Отключение токовых цепей линейного ТТ от ДЗО данной ВЛ.</summary>
     public const string DisconnectLineCtFromDzo = "DISCONNECT_LINE_CT_FROM_DZO";
@@ -49,14 +48,7 @@ public static class OperationCodes
     public const string TapvNoFieldClosing = "TAPV_NO_FIELD_CLOSING";
 
     /// <summary>
-    /// Перевод цепей напряжения с ТН ошиновки на резервный шинный ТН (для вывода с линейными разъединителями со стороны шин).
-    /// </summary>
-    public const string BusbarVtToReserveBusVtVoltageCircuitsTransfer =
-        "BUSBAR_VT_TO_RESERVE_BUS_VT_VOLTAGE_CIRCUITS_TRANSFER";
-
-    /// <summary>
     /// Вывод ДФЗ при выводе ВЛ с одной стороны.
     /// </summary>
     public const string DfzSingleSideWithdrawal = "DFZ_SINGLE_SIDE_WITHDRAWAL";
-
 }

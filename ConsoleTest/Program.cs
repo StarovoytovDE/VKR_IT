@@ -119,8 +119,8 @@ internal static class Program
         Console.WriteLine($" DeviceConnectedToLineCT={criteria.DeviceConnectedToLineCT}");
 
         Console.WriteLine($" VtSwitchTrue={criteria.VtSwitchTrue}");
-        Console.WriteLine($" MainVtPlace={criteria.MainVtPlace}, MainVtPlaceCode={criteria.MainVtPlaceCode}");
-        Console.WriteLine($" ReserveVtPlace={criteria.ReserveVtPlace}, ReserveVtPlaceCode={criteria.ReserveVtPlaceCode}");
+        Console.WriteLine($" MainVtName={criteria.MainVtName}, MainVtPlace={criteria.MainVtPlace}, MainVtPlaceCode={criteria.MainVtPlaceCode}");
+        Console.WriteLine($" ReserveVtName={criteria.ReserveVtName}, ReserveVtPlace={criteria.ReserveVtPlace}, ReserveVtPlaceCode={criteria.ReserveVtPlaceCode}");
 
         Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}");
         Console.WriteLine($" HasDZL={criteria.HasDZL}, DZLEnabled={criteria.DZLEnabled}");
@@ -143,10 +143,12 @@ internal static class Program
             new OapvOperation(),
             new TapvOperation(),
             new UpaskReceiversWithdrawalOperation(),
-            new LineVtToReserveVoltageCircuitsTransferOperation(),
+
+            // Универсальная операция перевода цепей напряжения:
+            new VtVoltageCircuitsTransferOperation(),
+
             new DisconnectLineCtFromDzoOperation(),
             new MtzoShinovkaAtoBOperation(),
-            new BusbarVtToReserveBusVtVoltageCircuitsTransferOperation(),
 
             new DfzNoFieldClosingOperation(),
             new DzNoFieldClosingOperation(),

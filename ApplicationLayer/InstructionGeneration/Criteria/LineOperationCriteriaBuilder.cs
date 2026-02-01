@@ -44,9 +44,11 @@ public sealed class LineOperationCriteriaBuilder
 
             VtSwitchTrue = snapshot.VtSwitchTrue,
 
+            MainVtName = snapshot.Vts.Main.Name ?? string.Empty,
             MainVtPlace = snapshot.Vts.Main.Place ?? string.Empty,
             MainVtPlaceCode = snapshot.Vts.Main.PlaceCode ?? string.Empty,
 
+            ReserveVtName = snapshot.Vts.Reserve.Name ?? string.Empty,
             ReserveVtPlace = snapshot.Vts.Reserve.Place ?? string.Empty,
             ReserveVtPlaceCode = snapshot.Vts.Reserve.PlaceCode ?? string.Empty,
 
@@ -61,7 +63,6 @@ public sealed class LineOperationCriteriaBuilder
             DZEnabled = request.FunctionStates.DzEnabled,
 
             // ОАПВ/ТАПВ:
-            // в БД нет Has*, поэтому используем только:
             // - state (snapshot.*.State.State)
             // - switch_off (snapshot.*.SwitchOff)
             OAPVEnabled = request.FunctionStates.OapvEnabled,

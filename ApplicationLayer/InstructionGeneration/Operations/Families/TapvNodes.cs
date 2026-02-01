@@ -18,9 +18,9 @@ public static class TapvNodes
             whenTrue: Node<LineOperationCriteria>.Decision(
                 predicate: c => c.TAPVState,
                 whenTrue: whenTrue,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
     /// <summary>
@@ -31,7 +31,7 @@ public static class TapvNodes
         => Node<LineOperationCriteria>.Decision(
             predicate: c => c.TAPVSwitchOff,
             whenTrue: whenTrue,
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
     /// <summary>

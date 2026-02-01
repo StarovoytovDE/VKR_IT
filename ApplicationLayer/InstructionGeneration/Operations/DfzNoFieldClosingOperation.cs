@@ -20,7 +20,7 @@ public sealed class DfzNoFieldClosingOperation : DecisionTreeOperationBase
             Node<LineOperationCriteria>.Decision(
                 predicate: c => c.BothLineBreakerCTsOnSubstationSide,
                 whenTrue: withdraw,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             );
 
         return DfzNodes.HasAndEnabled(enabledBranch);

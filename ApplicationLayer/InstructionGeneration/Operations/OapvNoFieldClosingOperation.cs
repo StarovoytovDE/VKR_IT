@@ -25,7 +25,7 @@ public sealed class OapvNoFieldClosingOperation : DecisionTreeOperationBase
         var afterSpecific = Node<LineOperationCriteria>.Decision(
             predicate: c => c.BothLineBreakerCTsOnSubstationSide,
             whenTrue: OapvNodes.SwitchOff(OapvNodes.WithdrawFunction()),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
         return OapvNodes.EnabledAndState(afterSpecific);

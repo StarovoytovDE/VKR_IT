@@ -23,11 +23,10 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
                 predicate: c => c.CtRemainsEnergizedOnThisSide,
                 whenTrue: Node<LineOperationCriteria>.Decision(
                     predicate: IsAnyVtSwitchRequired,
-                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
+                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions(FunctionNames.DFZ)),
                     whenFalse: OperationNodes.WithdrawByOnlyFunctionRule(FunctionNames.DFZ)
-                //whenFalse: withdraw
                 ),
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: withdraw
             );
 
         // Ветка whenFalse: устройство НЕ подключено к линейному ТТ -> выводим ДФЗ.

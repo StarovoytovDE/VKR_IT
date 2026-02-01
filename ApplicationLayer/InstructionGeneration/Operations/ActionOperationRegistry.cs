@@ -37,7 +37,7 @@ public sealed class ActionOperationRegistry : IActionOperationRegistry
                 OperationCodes.Oapv,
                 OperationCodes.Tapv,
                 OperationCodes.UpaskReceiversWithdrawal,
-                OperationCodes.LineVtToReserveVoltageCircuitsTransfer,
+                OperationCodes.VtVoltageCircuitsTransfer,
                 OperationCodes.DisconnectLineCtFromDzo,
                 OperationCodes.MtzoShinovkaAtoB,
             },
@@ -55,7 +55,7 @@ public sealed class ActionOperationRegistry : IActionOperationRegistry
             {
                 OperationCodes.Oapv,
                 OperationCodes.Tapv,
-                OperationCodes.BusbarVtToReserveBusVtVoltageCircuitsTransfer,
+                OperationCodes.VtVoltageCircuitsTransfer,
                 OperationCodes.DisconnectLineCtFromDzo,
             },
 

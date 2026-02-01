@@ -21,9 +21,9 @@ public sealed class DzlFieldClosingOperation : DecisionTreeOperationBase
             whenTrue: Node<LineOperationCriteria>.Decision(
                 predicate: c => c.DZLEnabled,
                 whenTrue: withdraw,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
     }
 }

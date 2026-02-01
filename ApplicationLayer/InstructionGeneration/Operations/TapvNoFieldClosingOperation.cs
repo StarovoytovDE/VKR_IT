@@ -25,7 +25,7 @@ public sealed class TapvNoFieldClosingOperation : DecisionTreeOperationBase
         var afterSpecific = Node<LineOperationCriteria>.Decision(
             predicate: c => c.BothLineBreakerCTsOnSubstationSide,
             whenTrue: TapvNodes.SwitchOff(TapvNodes.WithdrawFunction()),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
         return TapvNodes.EnabledAndState(afterSpecific);

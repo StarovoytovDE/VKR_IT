@@ -18,7 +18,7 @@ public sealed class DzNoFieldClosingOperation : DecisionTreeOperationBase
             Node<LineOperationCriteria>.Decision(
                 predicate: c => c.BothLineBreakerCTsOnSubstationSide,
                 whenTrue: DzNodes.WithdrawFunction(),
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             );
 
         return DzNodes.HasAndEnabled(enabledBranch);

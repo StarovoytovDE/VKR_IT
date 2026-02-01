@@ -19,9 +19,8 @@ public static class DfzNodes
                 predicate: c => c.DFZEnabled,
                 whenTrue: whenEnabled,
                 whenFalse: whenEnabled
-            //whenFalse: Node<LineOperationCriteria>.Action(null)
             ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
     /// <summary>
@@ -50,6 +49,6 @@ public static class DfzNodes
     public static Node<LineOperationCriteria> IfDeviceConnectedToLineCT(Node<LineOperationCriteria> whenTrue)
         => IfDeviceConnectedToLineCT(
             whenTrue,
-            Node<LineOperationCriteria>.Action(null)
+            Node<LineOperationCriteria>.NoAction()
         );
 }

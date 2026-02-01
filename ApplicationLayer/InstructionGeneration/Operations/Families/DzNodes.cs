@@ -18,9 +18,9 @@ public static class DzNodes
             whenTrue: Node<LineOperationCriteria>.Decision(
                 predicate: c => c.DZEnabled,
                 whenTrue: whenEnabled,
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             ),
-            whenFalse: Node<LineOperationCriteria>.Action(null)
+            whenFalse: Node<LineOperationCriteria>.NoAction()
         );
 
     /// <summary>

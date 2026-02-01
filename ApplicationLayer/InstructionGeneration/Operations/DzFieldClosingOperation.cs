@@ -25,10 +25,10 @@ public sealed class DzFieldClosingOperation : DecisionTreeOperationBase
                 predicate: IsMainVtLine,
                 whenTrue: Node<LineOperationCriteria>.Decision(
                     predicate: IsAnyVtSwitchRequired,
-                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
+                    whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions(FunctionNames.DZ)),
                     whenFalse: DzNodes.WithdrawFunction()
                 ),
-                whenFalse: Node<LineOperationCriteria>.Action(null)
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             );
 
         return DzNodes.HasAndEnabled(enabledBranch);

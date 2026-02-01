@@ -31,9 +31,9 @@ public sealed class MtzoShinovkaAtoBOperation : DecisionTreeOperationBase
             whenTrue: DT.Decision(
                 predicate: c => c.CtRemainsEnergizedOnThisSide,
                 whenTrue: DT.Action(InstructionTexts.MtzoShinovkaSwitchGroupAtoB),
-                whenFalse: DT.Action(null)
+                whenFalse: DT.NoAction()
             ),
-            whenFalse: DT.Action(null)
+            whenFalse: DT.NoAction()
         );
     }
 }
