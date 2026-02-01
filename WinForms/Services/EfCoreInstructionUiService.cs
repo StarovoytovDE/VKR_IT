@@ -73,8 +73,8 @@ namespace WinForms.Services
                         DzEnabled = device.dzEnabled,
 
                         // В текущем UI нет ввода по ОАПВ/ТАПВ — считаем "не введены".
-                        OapvEnabled = false,
-                        TapvEnabled = false
+                        OapvEnabled = true,
+                        TapvEnabled = true
                     }
                 };
 
@@ -107,7 +107,6 @@ namespace WinForms.Services
             {
                 UiActionCode.LineWithdrawalWithFieldClosing => ActionCode.LineWithdrawalWithFieldClosing,
                 UiActionCode.LineWithdrawalWithoutFieldClosing => ActionCode.LineWithdrawalWithoutFieldClosing,
-                UiActionCode.LineWithdrawalWithBusSideDisconnector => ActionCode.LineWithdrawalWithBusSideDisconnector,
                 UiActionCode.LineSingleSideWithdrawal => ActionCode.LineSingleSideWithdrawal,
                 _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Неизвестный код действия.")
             };

@@ -24,7 +24,8 @@ public sealed class DfzFieldClosingOperation : DecisionTreeOperationBase
                 whenTrue: Node<LineOperationCriteria>.Decision(
                     predicate: IsAnyVtSwitchRequired,
                     whenTrue: Node<LineOperationCriteria>.Action(InstructionTexts.FollowVoltageTransferInstructions),
-                    whenFalse: withdraw
+                    whenFalse: OperationNodes.WithdrawByOnlyFunctionRule(FunctionNames.DFZ)
+                //whenFalse: withdraw
                 ),
                 whenFalse: Node<LineOperationCriteria>.Action(null)
             );

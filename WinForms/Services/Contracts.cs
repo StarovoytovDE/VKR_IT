@@ -26,7 +26,9 @@ namespace WinForms.Services
         /// <summary>Вывод ВЛ без замыкания поля.</summary>
         LineWithdrawalWithoutFieldClosing,
 
-        /// <summary>Перевод цепей напряжения на резервный шинный ТН.</summary>
+        /// Создаётся схема, когда отключены линейные разъединители выключателей
+        /// ВЛ и остаётся включен хотя бы один из разъединителей выключателей ВЛ,
+        /// примыкающий к системе шин
         LineWithdrawalWithBusSideDisconnector,
 
         /// <summary>Односторонний вывод (пример).</summary>
