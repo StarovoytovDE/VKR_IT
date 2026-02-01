@@ -4,10 +4,7 @@ using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
-/// Операция: вывести функцию ТАПВ.
-/// Общий алгоритм для действий:
-/// - LineWithdrawalWithFieldClosing
-/// - LineWithdrawalWithoutFieldClosing
+/// Операция: вывод ТАПВ для действия "Вывод ВЛ с замыканием поля".
 /// </summary>
 public sealed class TapvOperation : DecisionTreeOperationBase
 {
@@ -17,6 +14,14 @@ public sealed class TapvOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        return TapvNodes.HasAndEnabled(TapvNodes.WithdrawFunction());
+        // Новый алгоритм:
+        // TAPVEnabled? -> TAPVState?
+        //   нет/false -> null
+        //   да/true   -> TAPVSwitchOff?
+        //                true  -> "вывести функцию ТАПВ"
+        //                false -> null
+        return TapvNodes.EnabledAndState(
+            whenTrue: TapvNodes.SwitchOff(TapvNodes.WithdrawFunction())
+        );
     }
 }

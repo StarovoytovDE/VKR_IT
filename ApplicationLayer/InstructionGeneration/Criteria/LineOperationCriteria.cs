@@ -3,14 +3,18 @@
 namespace ApplicationLayer.InstructionGeneration.Criteria;
 
 /// <summary>
-/// Контекст (критерии) выполнения действия над линией
-/// для конкретного устройства РЗ и СА и стороны линии.
+/// Критерии для генерации указаний по операциям с устройством на линии.
+/// Содержит параметры устройства (из snapshot БД) + ввод диспетчера (из request).
 /// </summary>
-public sealed record LineOperationCriteria
+public sealed class LineOperationCriteria
 {
     /// <summary>
-    /// Инициализирует новый экземпляр <see cref="LineOperationCriteria"/>.
+    /// Создаёт критерии.
     /// </summary>
+    /// <param name="lineCode">Код/диспетчерское имя линии.</param>
+    /// <param name="side">Сторона линии.</param>
+    /// <param name="deviceObjectId">Идентификатор устройства в критериях/логах.</param>
+    /// <param name="actionCode">Код действия (сценария).</param>
     public LineOperationCriteria(string lineCode, SideOfLine side, int deviceObjectId, ActionCode actionCode)
     {
         LineCode = lineCode;
@@ -19,16 +23,16 @@ public sealed record LineOperationCriteria
         ActionCode = actionCode;
     }
 
-    /// <summary>Идентификатор линии.</summary>
+    /// <summary>Код/диспетчерское имя линии.</summary>
     public string LineCode { get; init; }
 
     /// <summary>Сторона линии.</summary>
     public SideOfLine Side { get; init; }
 
-    /// <summary>Идентификатор объекта устройства.</summary>
+    /// <summary>Идентификатор устройства (для логов/трассировки).</summary>
     public int DeviceObjectId { get; init; }
 
-    /// <summary>Необязательное имя устройства (UI/логи).</summary>
+    /// <summary>Имя устройства (для UI/логов).</summary>
     public string? DeviceName { get; init; }
 
     /// <summary>Код действия.</summary>
@@ -66,33 +70,76 @@ public sealed record LineOperationCriteria
     public string ReserveVtPlaceCode { get; init; } = string.Empty;
 
     // =========================
-    // Функции (паспорт + оперативное состояние)
+    // Функции (оперативное состояние + флаги из БД)
     // =========================
 
+    /// <summary>Наличие ДФЗ в устройстве (паспорт/конфигурация).</summary>
     public bool HasDFZ { get; init; }
+
+    /// <summary>Ввод диспетчера: ДФЗ введена.</summary>
     public bool DFZEnabled { get; init; }
 
+    /// <summary>Оба выключателя линии имеют ТТ со стороны ПС (для частных веток логики).</summary>
     public bool BothLineBreakerCTsOnSubstationSide { get; init; }
+
+    /// <summary>Функция единственная в устройстве (для правила "вывести устройство").</summary>
     public bool IsOnlyFunctionInDevice { get; init; }
+
+    /// <summary>Наличие МТЗ ошиновки.</summary>
     public bool HasMtzoShinovka { get; init; }
 
+    /// <summary>Наличие ДЗЛ в устройстве.</summary>
     public bool HasDZL { get; init; }
+
+    /// <summary>Ввод диспетчера: ДЗЛ введена.</summary>
     public bool DZLEnabled { get; init; }
 
+    /// <summary>Наличие ДЗ в устройстве.</summary>
     public bool HasDZ { get; init; }
+
+    /// <summary>Ввод диспетчера: ДЗ введена.</summary>
     public bool DZEnabled { get; init; }
 
-    public bool HasOAPV { get; init; }
+    /// <summary>
+    /// Ввод диспетчера: ОАПВ выбрана/учитывается в сценарии.
+    /// </summary>
     public bool OAPVEnabled { get; init; }
 
-    public bool HasTAPV { get; init; }
+    /// <summary>
+    /// Состояние ОАПВ из БД (state).
+    /// True — функция находится во включенном/активном состоянии.
+    /// </summary>
+    public bool OAPVState { get; init; }
+
+    /// <summary>
+    /// Флаг ОАПВ из БД (switch_off).
+    /// True — требуется вывод (ОАПВ отключено / подлежит выводу по принятой логике).
+    /// </summary>
+    public bool OAPVSwitchOff { get; init; }
+
+    /// <summary>
+    /// Ввод диспетчера: ТАПВ выбрана/учитывается в сценарии.
+    /// </summary>
     public bool TAPVEnabled { get; init; }
+
+    /// <summary>
+    /// Состояние ТАПВ из БД (state).
+    /// </summary>
+    public bool TAPVState { get; init; }
+
+    /// <summary>
+    /// Флаг ТАПВ из БД (switch_off).
+    /// </summary>
+    public bool TAPVSwitchOff { get; init; }
 
     // =========================
     // Технологические флаги (device)
     // =========================
 
+    /// <summary>Требуется ли вывод приёмников УПАСК.</summary>
     public bool NeedDisableUpaskReceivers { get; init; }
+
+    /// <summary>Требуется ли отключение линейного ТТ от ДЗО.</summary>
     public bool NeedDisconnectLineCTFromDZO { get; init; }
 
     /// <summary>
@@ -101,5 +148,6 @@ public sealed record LineOperationCriteria
     /// </summary>
     public bool CtRemainsEnergizedOnThisSide { get; init; }
 
+    /// <summary>Разрешено ли замыкание поля.</summary>
     public bool IsFieldClosingAllowed { get; init; }
 }

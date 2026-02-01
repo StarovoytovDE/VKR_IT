@@ -14,13 +14,20 @@ public sealed class TapvNoFieldClosingOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        var enabledBranch =
-            Node<LineOperationCriteria>.Decision(
-                predicate: c => c.BothLineBreakerCTsOnSubstationSide,
-                whenTrue: TapvNodes.WithdrawFunction(),
-                whenFalse: Node<LineOperationCriteria>.Action(null)
-            );
+        // Новый алгоритм:
+        // TAPVEnabled? -> TAPVState?
+        //   нет/false -> null
+        //   да/true   -> BothLineBreakerCTsOnSubstationSide?
+        //                нет -> null
+        //                да  -> TAPVSwitchOff?
+        //                       true  -> "вывести функцию ТАПВ"
+        //                       false -> null
+        var afterSpecific = Node<LineOperationCriteria>.Decision(
+            predicate: c => c.BothLineBreakerCTsOnSubstationSide,
+            whenTrue: TapvNodes.SwitchOff(TapvNodes.WithdrawFunction()),
+            whenFalse: Node<LineOperationCriteria>.Action(null)
+        );
 
-        return TapvNodes.HasAndEnabled(enabledBranch);
+        return TapvNodes.EnabledAndState(afterSpecific);
     }
 }

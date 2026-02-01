@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using ApplicationLayer.InstructionGeneration.Criteria;
+﻿using ApplicationLayer.InstructionGeneration.Criteria;
 using ApplicationLayer.InstructionGeneration.Models;
 using ApplicationLayer.InstructionGeneration.Operations;
 using ApplicationLayer.InstructionGeneration.Requests;
@@ -10,6 +7,10 @@ using Domain.ReferenceData;
 using Infrastructure.InstructionGeneration.Services;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 internal static class Program
 {
@@ -25,12 +26,17 @@ internal static class Program
         var connectionString =
             "Host=localhost;Port=5432;Database=vkr_it;Username=vkr_it_app;Password=VKRitAPP12345671";
 
-        var dbOptions = new DbContextOptionsBuilder<VkrItDbContext>()
+        var optionsBuilder = new DbContextOptionsBuilder<VkrItDbContext>()
             .UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("Infrastructure"))
-            .UseSnakeCaseNamingConvention()
-            .Options;
+            .UseSnakeCaseNamingConvention();
 
-        await using var db = new VkrItDbContext(dbOptions);
+        // Контекст нужен для миграций/сидирования.
+        await using var db = new VkrItDbContext(optionsBuilder.Options);
+
+        // Фабрика нужна для «правильного» чтения snapshot (EfCoreDeviceParamsReader).
+        // В актуальной версии reader должен создавать DbContext сам (через factory).
+        IDbContextFactory<VkrItDbContext> dbFactory =
+            new PooledDbContextFactory<VkrItDbContext>(optionsBuilder.Options);
 
         await db.Database.MigrateAsync();
 
@@ -62,7 +68,7 @@ internal static class Program
         }
 
         // 1) Считываем snapshot (правильная интеграция: reader на устройство)
-        var reader = new EfCoreDeviceParamsReader(db);
+        var reader = new EfCoreDeviceParamsReader(dbFactory);
         var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
 
         Console.WriteLine();
@@ -75,6 +81,10 @@ internal static class Program
         Console.WriteLine($"Snapshot: VT Main='{snapshot.Vts.Main.Name}', Place='{snapshot.Vts.Main.Place}', PlaceCode='{snapshot.Vts.Main.PlaceCode}'");
         Console.WriteLine($"Snapshot: VT Reserve='{snapshot.Vts.Reserve.Name}', Place='{snapshot.Vts.Reserve.Place}', PlaceCode='{snapshot.Vts.Reserve.PlaceCode}'");
         Console.WriteLine($"Snapshot: CT Place='{snapshot.CtPlace.Place}', PlaceCode='{snapshot.CtPlace.PlaceCode}'");
+
+        // ОАПВ/ТАПВ: В БД нет Has*, есть только State + SwitchOff.
+        Console.WriteLine($"Snapshot: OAPV State={snapshot.Oapv.State.State}, SwitchOff={snapshot.Oapv.SwitchOff}");
+        Console.WriteLine($"Snapshot: TAPV State={snapshot.Tapv.State.State}, SwitchOff={snapshot.Tapv.SwitchOff}");
 
         // 2) Формируем request (то, что задаёт диспетчер через UI)
         var request = new LineOperationRequest
@@ -115,6 +125,10 @@ internal static class Program
         Console.WriteLine($" HasDFZ={criteria.HasDFZ}, DFZEnabled={criteria.DFZEnabled}");
         Console.WriteLine($" HasDZL={criteria.HasDZL}, DZLEnabled={criteria.DZLEnabled}");
         Console.WriteLine($" HasDZ={criteria.HasDZ}, DZEnabled={criteria.DZEnabled}");
+
+        // ОАПВ/ТАПВ по новой схеме:
+        Console.WriteLine($" OAPV: Enabled={criteria.OAPVEnabled}, State={criteria.OAPVState}, SwitchOff={criteria.OAPVSwitchOff}");
+        Console.WriteLine($" TAPV: Enabled={criteria.TAPVEnabled}, State={criteria.TAPVState}, SwitchOff={criteria.TAPVSwitchOff}");
 
         Console.WriteLine($" NeedDisableUpaskReceivers={criteria.NeedDisableUpaskReceivers}");
         Console.WriteLine($" NeedDisconnectLineCTFromDZO={criteria.NeedDisconnectLineCTFromDZO}");
@@ -193,12 +207,52 @@ internal static class Program
             await db.SaveChangesAsync();
         }
 
-        var device = await db.Devices.FirstOrDefaultAsync(x => x.LineEndId == obj.ObjectId && x.Name == "Устройство РЗА 1");
+        // Актуальная БД: device.line_end_id -> line_end.line_end_id
+        // Поэтому сначала гарантируем наличие LineEnd.
+        var lineEnd = await db.LineEnds.FirstOrDefaultAsync(x =>
+            x.ObjectId == obj.ObjectId &&
+            x.SubstationId == substation.SubstationId &&
+            x.SideCode == "A");
+
+        if (lineEnd is null)
+        {
+            lineEnd = new LineEnd
+            {
+                ObjectId = obj.ObjectId,
+                SubstationId = substation.SubstationId,
+                SideCode = "A",
+            };
+
+            db.LineEnds.Add(lineEnd);
+            await db.SaveChangesAsync();
+        }
+
+        // Пытаемся найти устройство уже по корректному line_end_id
+        var device = await db.Devices.FirstOrDefaultAsync(x =>
+            x.LineEndId == lineEnd.LineEndId &&
+            x.Name == "Устройство РЗА 1");
+
+        // Если ранее ConsoleTest создавал устройство с LineEndId=obj.ObjectId (устаревшая схема),
+        // то аккуратно «переедем» на актуальный line_end_id.
+        if (device is null)
+        {
+            var legacyDevice = await db.Devices.FirstOrDefaultAsync(x =>
+                x.LineEndId == obj.ObjectId &&
+                x.Name == "Устройство РЗА 1");
+
+            if (legacyDevice is not null)
+            {
+                legacyDevice.LineEndId = lineEnd.LineEndId;
+                await db.SaveChangesAsync();
+                device = legacyDevice;
+            }
+        }
+
         if (device is null)
         {
             device = new Device
             {
-                LineEndId = obj.ObjectId,
+                LineEndId = lineEnd.LineEndId,
                 Name = "Устройство РЗА 1",
 
                 // Технологические параметры устройства (как в целевой архитектуре).
@@ -211,6 +265,7 @@ internal static class Program
                 // Новый флаг — задаём при создании (не трогаем существующие значения при повторных запусках).
                 CtRemainsEnergized = false
             };
+
             db.Devices.Add(device);
             await db.SaveChangesAsync();
         }
@@ -319,7 +374,7 @@ internal static class Program
                 await db.SaveChangesAsync();
         }
 
-        // Функции
+        // Функции (минимально)
         var dfz = await db.Dfzs.FirstOrDefaultAsync(x => x.DeviceId == device.DeviceId && x.Code == "DFZ");
         if (dfz is null)
         {
@@ -373,7 +428,7 @@ internal static class Program
                 DeviceId = device.DeviceId,
                 Code = "OAPV",
                 Name = "ОАПВ",
-                SwitchOff = false,
+                SwitchOff = true,
                 State = true
             };
             db.Oapvs.Add(oapv);
@@ -388,7 +443,7 @@ internal static class Program
                 DeviceId = device.DeviceId,
                 Code = "TAPV",
                 Name = "ТАПВ",
-                SwitchOff = false,
+                SwitchOff = true,
                 State = true
             };
             db.Tapvs.Add(tapv);

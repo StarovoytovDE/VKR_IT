@@ -54,15 +54,23 @@ public sealed class LineOperationCriteriaBuilder
             HasDFZ = snapshot.Dfz.Has,
             HasDZL = snapshot.Dzl.Has,
             HasDZ = snapshot.Dz.Has,
-            HasOAPV = snapshot.Oapv.State.Has,
-            HasTAPV = snapshot.Tapv.State.Has,
 
-            // ОПЕРАТИВНОЕ СОСТОЯНИЕ (введено/не введено) — только из запроса диспетчера
+            // ОПЕРАТИВНОЕ СОСТОЯНИЕ (введено/не введено) — из запроса диспетчера
             DFZEnabled = request.FunctionStates.DfzEnabled,
             DZLEnabled = request.FunctionStates.DzlEnabled,
             DZEnabled = request.FunctionStates.DzEnabled,
+
+            // ОАПВ/ТАПВ:
+            // в БД нет Has*, поэтому используем только:
+            // - state (snapshot.*.State.State)
+            // - switch_off (snapshot.*.SwitchOff)
             OAPVEnabled = request.FunctionStates.OapvEnabled,
+            OAPVState = snapshot.Oapv.State.State,
+            OAPVSwitchOff = snapshot.Oapv.SwitchOff,
+
             TAPVEnabled = request.FunctionStates.TapvEnabled,
+            TAPVState = snapshot.Tapv.State.State,
+            TAPVSwitchOff = snapshot.Tapv.SwitchOff,
 
             // Технологические флаги (device)
             IsFieldClosingAllowed = snapshot.IsFieldClosingAllowed,

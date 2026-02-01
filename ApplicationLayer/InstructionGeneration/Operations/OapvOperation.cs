@@ -4,10 +4,7 @@ using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
-/// Операция: вывести функцию ОАПВ.
-/// Общий алгоритм для действий:
-/// - LineWithdrawalWithFieldClosing
-/// - LineWithdrawalWithoutFieldClosing
+/// Операция: вывод ОАПВ для действия "Вывод ВЛ с замыканием поля".
 /// </summary>
 public sealed class OapvOperation : DecisionTreeOperationBase
 {
@@ -17,7 +14,14 @@ public sealed class OapvOperation : DecisionTreeOperationBase
     /// <inheritdoc />
     protected override Node<LineOperationCriteria> BuildTree()
     {
-        // enabled-ветка для "обычного" ОАПВ — просто вывести функцию.
-        return OapvNodes.HasAndEnabled(OapvNodes.WithdrawFunction());
+        // Новый алгоритм:
+        // OAPVEnabled? -> OAPVState?
+        //   нет/false -> null
+        //   да/true   -> OAPVSwitchOff?
+        //                true  -> "вывести функцию ОАПВ"
+        //                false -> null
+        return OapvNodes.EnabledAndState(
+            whenTrue: OapvNodes.SwitchOff(OapvNodes.WithdrawFunction())
+        );
     }
 }

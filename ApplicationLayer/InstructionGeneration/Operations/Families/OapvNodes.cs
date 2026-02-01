@@ -4,22 +4,33 @@ using ApplicationLayer.InstructionGeneration.Operations.DecisionTree;
 namespace ApplicationLayer.InstructionGeneration.Operations;
 
 /// <summary>
-/// Типовые узлы дерева решений для семейства ОАПВ.
+/// Узлы дерева решений для ОАПВ.
 /// </summary>
 public static class OapvNodes
 {
     /// <summary>
-    /// Типовой каркас для ОАПВ:
-    /// HasOAPV? -> OAPVEnabled? -> (ветка whenEnabled) / null
+    /// Типовой каркас для ОАПВ по новой модели (без HasOAPV):
+    /// OAPVEnabled? -> OAPVState? -> (ветка whenTrue) / null
     /// </summary>
-    public static Node<LineOperationCriteria> HasAndEnabled(Node<LineOperationCriteria> whenEnabled)
+    public static Node<LineOperationCriteria> EnabledAndState(Node<LineOperationCriteria> whenTrue)
         => Node<LineOperationCriteria>.Decision(
-            predicate: c => c.HasOAPV,
+            predicate: c => c.OAPVEnabled,
             whenTrue: Node<LineOperationCriteria>.Decision(
-                predicate: c => c.OAPVEnabled,
-                whenTrue: whenEnabled,
+                predicate: c => c.OAPVState,
+                whenTrue: whenTrue,
                 whenFalse: Node<LineOperationCriteria>.Action(null)
             ),
+            whenFalse: Node<LineOperationCriteria>.Action(null)
+        );
+
+    /// <summary>
+    /// Проверка флага switch_off для ОАПВ:
+    /// OAPVSwitchOff? -> (ветка whenTrue) / null
+    /// </summary>
+    public static Node<LineOperationCriteria> SwitchOff(Node<LineOperationCriteria> whenTrue)
+        => Node<LineOperationCriteria>.Decision(
+            predicate: c => c.OAPVSwitchOff,
+            whenTrue: whenTrue,
             whenFalse: Node<LineOperationCriteria>.Action(null)
         );
 
@@ -28,11 +39,4 @@ public static class OapvNodes
     /// </summary>
     public static Node<LineOperationCriteria> WithdrawFunction()
         => Node<LineOperationCriteria>.Action(InstructionTexts.WithdrawFunction(FunctionNames.OAPV));
-
-    /// <summary>
-    /// На будущее (если решите применять правило "вывести устройство/функцию" и для ОАПВ).
-    /// Сейчас не используется в текущих деревьях, но готово для расширения.
-    /// </summary>
-    public static Node<LineOperationCriteria> WithdrawByOnlyFunctionRule()
-        => OperationNodes.WithdrawByOnlyFunctionRule(FunctionNames.OAPV);
 }
