@@ -49,7 +49,10 @@ namespace WinForms.Services
             {
                 UiActionCode.LineWithdrawalWithFieldClosing => "Вывод ВЛ с замыканием поля",
                 UiActionCode.LineWithdrawalWithoutFieldClosing => "Вывод ВЛ без замыкания поля",
-                UiActionCode.LineWithdrawalWithBusSideDisconnector => "Перевод цепей напряжения на резервный шинный ТН",
+                UiActionCode.LineWithdrawalWithBusSideDisconnector =>
+                    "Создаётся схема, когда отключены линейные разъединители " +
+                    "выключателей ВЛ и остаётся включен хотя бы один из " +
+                    "разъединителей выключателей ВЛ, примыкающий к системе шин",
                 UiActionCode.LineSingleSideWithdrawal => "Односторонний вывод",
                 _ => code.ToString()
             };
