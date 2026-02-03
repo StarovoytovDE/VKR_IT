@@ -33,7 +33,7 @@ public static class DependencyInjection
                     npgsql.MigrationsAssembly("Infrastructure"))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddTransient<DbSeeder>();
+        //services.AddTransient<DbSeeder>();
 
         // Reader агрегированных параметров устройства (снимок DeviceParamsSnapshot).
         services.AddScoped<IDeviceParamsReader, EfCoreDeviceParamsReader>();

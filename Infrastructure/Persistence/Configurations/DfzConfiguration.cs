@@ -29,10 +29,6 @@ public sealed class DfzConfiguration : IEntityTypeConfiguration<Dfz>
         builder.Property(x => x.Name)
             .IsRequired();
 
-        builder.Property(x => x.HazDfz)
-            .HasColumnName("haz_dfz")
-            .IsRequired();
-
         builder.Property(x => x.State)
             .IsRequired();
 

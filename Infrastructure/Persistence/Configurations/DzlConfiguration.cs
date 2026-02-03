@@ -29,10 +29,6 @@ public sealed class DzlConfiguration : IEntityTypeConfiguration<Dzl>
         builder.Property(x => x.Name)
             .IsRequired();
 
-        builder.Property(x => x.HazDzl)
-            .HasColumnName("haz_dzl")
-            .IsRequired();
-
         builder.Property(x => x.State)
             .IsRequired();
 

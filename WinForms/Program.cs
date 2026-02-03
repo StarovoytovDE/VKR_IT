@@ -33,7 +33,7 @@ namespace WinForms
                     services.AddSingleton<IOperation, OapvOperation>();
                     services.AddSingleton<IOperation, TapvOperation>();
                     services.AddSingleton<IOperation, UpaskReceiversWithdrawalOperation>();
-                    services.AddSingleton<IOperation, LineVtToReserveVoltageCircuitsTransferOperation>();
+                    services.AddSingleton<IOperation, VtVoltageCircuitsTransferOperation>();
                     services.AddSingleton<IOperation, DisconnectLineCtFromDzoOperation>();
                     services.AddSingleton<IOperation, MtzoShinovkaAtoBOperation>();
 
@@ -42,7 +42,6 @@ namespace WinForms
                     services.AddSingleton<IOperation, OapvNoFieldClosingOperation>();
                     services.AddSingleton<IOperation, TapvNoFieldClosingOperation>();
 
-                    services.AddSingleton<IOperation, BusbarVtToReserveBusVtVoltageCircuitsTransferOperation>();
                     services.AddSingleton<IOperation, DfzSingleSideWithdrawalOperation>();
 
                     services.AddSingleton<IActionOperationRegistry, ActionOperationRegistry>();

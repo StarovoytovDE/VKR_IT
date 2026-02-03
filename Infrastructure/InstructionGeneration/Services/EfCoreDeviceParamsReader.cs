@@ -106,17 +106,17 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
 
             Dfz = new FunctionStateSnapshot
             {
-                Has = dfz.Any(x => x.HazDfz),
+                Has = dfz.Any(),
                 State = dfz.Any(x => x.State)
             },
             Dzl = new FunctionStateSnapshot
             {
-                Has = dzl.Any(x => x.HazDzl),
+                Has = dzl.Any(),
                 State = dzl.Any(x => x.State)
             },
             Dz = new FunctionStateSnapshot
             {
-                Has = dz.Any(x => x.HazDz),
+                Has = dz.Any(),
                 State = dz.Any(x => x.State)
             },
 

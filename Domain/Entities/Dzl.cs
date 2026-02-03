@@ -2,6 +2,7 @@
 
 /// <summary>
 /// Функция ДЗЛ, привязанная к устройству.
+/// Признак наличия функции в логике определяется фактом наличия записи ДЗЛ для устройства.
 /// </summary>
 public sealed class Dzl
 {
@@ -24,11 +25,6 @@ public sealed class Dzl
     /// Наименование функции.
     /// </summary>
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Признак наличия (haz_dzl).
-    /// </summary>
-    public bool HazDzl { get; set; }
 
     /// <summary>
     /// Состояние (state).

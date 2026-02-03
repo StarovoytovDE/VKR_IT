@@ -2,6 +2,7 @@
 
 /// <summary>
 /// Функция ДФЗ, привязанная к устройству.
+/// Признак наличия функции в логике определяется фактом наличия записи ДФЗ для устройства.
 /// </summary>
 public sealed class Dfz
 {
@@ -24,11 +25,6 @@ public sealed class Dfz
     /// Наименование функции.
     /// </summary>
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Признак наличия/актуальности (в диаграмме помечено как haz_dfz).
-    /// </summary>
-    public bool HazDfz { get; set; }
 
     /// <summary>
     /// Состояние функции (введена/не введена) — как в диаграмме state.
