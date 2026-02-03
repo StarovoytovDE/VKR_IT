@@ -53,14 +53,29 @@ public sealed class Device
     public bool CtRemainsEnergized { get; set; }
 
     /// <summary>
+    /// Идентификатор основного ТН (main_vt_id).
+    /// </summary>
+    public long MainVtId { get; set; }
+
+    /// <summary>
+    /// Идентификатор резервного ТН (reserve_vt_id).
+    /// </summary>
+    public long ReserveVtId { get; set; }
+
+    /// <summary>
     /// Навигация на конец линии.
     /// </summary>
     public LineEnd LineEnd { get; set; } = null!;
 
     /// <summary>
-    /// Связанные записи ТН (VT).
+    /// Навигация на основной ТН.
     /// </summary>
-    public ICollection<Vt> Vts { get; set; } = [];
+    public Vt MainVt { get; set; } = null!;
+
+    /// <summary>
+    /// Навигация на резервный ТН.
+    /// </summary>
+    public Vt ReserveVt { get; set; } = null!;
 
     /// <summary>
     /// Возможные места подключения ТТ (CT place).
@@ -93,7 +108,7 @@ public sealed class Device
     public ICollection<Tapv> Tapvs { get; set; } = [];
 
     /// <summary>
-    /// МТЗ ошиновки (как функция/запись, без технологического флага A→B).
+    /// МТЗ ошиновки.
     /// </summary>
     public ICollection<MtzBusbar> MtzBusbars { get; set; } = [];
 

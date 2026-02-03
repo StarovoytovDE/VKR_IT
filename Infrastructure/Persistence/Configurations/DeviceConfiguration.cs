@@ -25,6 +25,7 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .IsRequired();
 
         builder.Property(x => x.Name)
+            .HasColumnName("name")
             .IsRequired();
 
         builder.Property(x => x.VtSwitchTrue)
@@ -47,9 +48,29 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasColumnName("ct_remains_energized")
             .IsRequired();
 
+        builder.Property(x => x.MainVtId)
+            .HasColumnName("main_vt_id")
+            .IsRequired();
+
+        builder.Property(x => x.ReserveVtId)
+            .HasColumnName("reserve_vt_id")
+            .IsRequired();
+
         builder.HasOne(x => x.LineEnd)
             .WithMany(x => x.Devices)
             .HasForeignKey(x => x.LineEndId)
             .HasConstraintName("fk_device_line_end");
+
+        // ВАЖНО: два разных FK на одну и ту же таблицу vt.
+        // Для избежания циклов каскадного удаления используем Restrict.
+        builder.HasOne(x => x.MainVt)
+            .WithMany()
+            .HasForeignKey(x => x.MainVtId)
+            .HasConstraintName("fk_device_main_vt");
+
+        builder.HasOne(x => x.ReserveVt)
+            .WithMany()
+            .HasForeignKey(x => x.ReserveVtId)
+            .HasConstraintName("fk_device_reserve_vt");
     }
 }

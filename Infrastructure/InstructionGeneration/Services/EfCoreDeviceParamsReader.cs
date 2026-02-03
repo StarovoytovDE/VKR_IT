@@ -30,8 +30,11 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
+        // Device содержит два FK на vt: MainVtId и ReserveVtId, поэтому можно одним запросом подтянуть оба ТН.
         var device = await db.Devices
             .AsNoTracking()
+            .Include(x => x.MainVt)
+            .Include(x => x.ReserveVt)
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
         var ctPlace = await db.CtPlaces
@@ -40,14 +43,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             .OrderByDescending(x => x.CtPlaceId)
             .FirstOrDefaultAsync(ct);
 
-        var vts = await db.Vts
-            .AsNoTracking()
-            .Where(x => x.DeviceId == deviceId)
-            .ToListAsync(ct);
-
-        var mainVt = vts.SingleOrDefault(x => x.Main);
-        var reserveVt = vts.SingleOrDefault(x => !x.Main);
-
+        // Наличие функций определяется наличием записей в таблицах функций.
         var dfz = await db.Dfzs
             .AsNoTracking()
             .Where(x => x.DeviceId == deviceId)
@@ -92,31 +88,31 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             {
                 Main = new VtSnapshot
                 {
-                    Name = mainVt?.Name ?? string.Empty,
-                    Place = mainVt?.Place ?? string.Empty,
-                    PlaceCode = mainVt?.PlaceCode ?? string.Empty
+                    Name = device.MainVt?.Name ?? string.Empty,
+                    Place = device.MainVt?.Place ?? string.Empty,
+                    PlaceCode = device.MainVt?.PlaceCode ?? string.Empty
                 },
                 Reserve = new VtSnapshot
                 {
-                    Name = reserveVt?.Name ?? string.Empty,
-                    Place = reserveVt?.Place ?? string.Empty,
-                    PlaceCode = reserveVt?.PlaceCode ?? string.Empty
+                    Name = device.ReserveVt?.Name ?? string.Empty,
+                    Place = device.ReserveVt?.Place ?? string.Empty,
+                    PlaceCode = device.ReserveVt?.PlaceCode ?? string.Empty
                 }
             },
 
             Dfz = new FunctionStateSnapshot
             {
-                Has = dfz.Any(),
+                Has = dfz.Count > 0,
                 State = dfz.Any(x => x.State)
             },
             Dzl = new FunctionStateSnapshot
             {
-                Has = dzl.Any(),
+                Has = dzl.Count > 0,
                 State = dzl.Any(x => x.State)
             },
             Dz = new FunctionStateSnapshot
             {
-                Has = dz.Any(),
+                Has = dz.Count > 0,
                 State = dz.Any(x => x.State)
             },
 
@@ -124,6 +120,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             {
                 State = new FunctionStateSnapshot
                 {
+                    Has = oapv.Count > 0,
                     State = oapv.Any(x => x.State)
                 },
                 SwitchOff = oapv.Any(x => x.SwitchOff)
@@ -133,6 +130,7 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
             {
                 State = new FunctionStateSnapshot
                 {
+                    Has = tapv.Count > 0,
                     State = tapv.Any(x => x.State)
                 },
                 SwitchOff = tapv.Any(x => x.SwitchOff)
