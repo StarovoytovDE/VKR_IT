@@ -18,11 +18,6 @@ public sealed class ObjectTable
     public long ObjectTypeId { get; set; }
 
     /// <summary>
-    /// Уникальный UID объекта.
-    /// </summary>
-    public string Uid { get; set; } = string.Empty;
-
-    /// <summary>
     /// Диспетчерское наименование объекта.
     /// </summary>
     public string DispatchName { get; set; } = string.Empty;

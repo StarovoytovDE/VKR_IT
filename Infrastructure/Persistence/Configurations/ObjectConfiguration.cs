@@ -23,9 +23,6 @@ public sealed class ObjectConfiguration : IEntityTypeConfiguration<ObjectTable>
         builder.Property(x => x.ObjectTypeId)
             .IsRequired();
 
-        builder.Property(x => x.Uid)
-            .IsRequired();
-
         builder.Property(x => x.DispatchName)
             .IsRequired();
 
