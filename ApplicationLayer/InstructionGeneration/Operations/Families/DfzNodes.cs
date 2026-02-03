@@ -18,7 +18,7 @@ public static class DfzNodes
             whenTrue: Node<LineOperationCriteria>.Decision(
                 predicate: c => c.DFZEnabled,
                 whenTrue: whenEnabled,
-                whenFalse: whenEnabled
+                whenFalse: Node<LineOperationCriteria>.NoAction()
             ),
             whenFalse: Node<LineOperationCriteria>.NoAction()
         );
