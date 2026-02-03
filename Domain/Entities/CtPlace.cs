@@ -1,15 +1,12 @@
 ﻿namespace Domain.Entities;
 
 /// <summary>
-/// Место подключения трансформаторов тока (ТТ) устройства.
+/// Место подключения трансформаторов тока (ТТ) устройства (справочник).
 /// </summary>
 public sealed class CtPlace
 {
     /// <summary>PK.</summary>
     public long CtPlaceId { get; set; }
-
-    /// <summary>FK → Device.</summary>
-    public long DeviceId { get; set; }
 
     /// <summary>Наименование варианта (для UI).</summary>
     public string Name { get; set; } = string.Empty;
@@ -25,7 +22,4 @@ public sealed class CtPlace
     /// CT_LINE_BEFORE_LR / CT_LINE_AFTER_LR / CT_SUM_BREAKERS
     /// </summary>
     public string PlaceCode { get; set; } = string.Empty;
-
-    /// <summary>Навигация → Device.</summary>
-    public Device Device { get; set; } = null!;
 }

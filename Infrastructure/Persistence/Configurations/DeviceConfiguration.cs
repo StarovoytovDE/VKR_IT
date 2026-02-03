@@ -24,6 +24,9 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .HasColumnName("line_end_id")
             .IsRequired();
 
+        builder.Property(x => x.CtPlaceId)
+            .HasColumnName("ct_place_id"); // nullable
+
         builder.Property(x => x.Name)
             .HasColumnName("name")
             .IsRequired();
@@ -60,6 +63,12 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .WithMany(x => x.Devices)
             .HasForeignKey(x => x.LineEndId)
             .HasConstraintName("fk_device_line_end");
+
+        // FK на справочник места подключения ТТ
+        builder.HasOne(x => x.CtPlace)
+            .WithMany()
+            .HasForeignKey(x => x.CtPlaceId)
+            .HasConstraintName("fk_device_ct_place");
 
         // ВАЖНО: два разных FK на одну и ту же таблицу vt.
         // Для избежания циклов каскадного удаления используем Restrict.

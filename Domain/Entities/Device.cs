@@ -19,6 +19,12 @@ public sealed class Device
     public long LineEndId { get; set; }
 
     /// <summary>
+    /// Идентификатор места подключения ТТ (ct_place_id).
+    /// Nullable — чтобы миграции не падали на существующих данных.
+    /// </summary>
+    public long? CtPlaceId { get; set; }
+
+    /// <summary>
     /// Наименование устройства.
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -78,9 +84,9 @@ public sealed class Device
     public Vt ReserveVt { get; set; } = null!;
 
     /// <summary>
-    /// Возможные места подключения ТТ (CT place).
+    /// Навигация на место подключения ТТ.
     /// </summary>
-    public ICollection<CtPlace> CtPlaces { get; set; } = [];
+    public CtPlace? CtPlace { get; set; }
 
     /// <summary>
     /// Функции ДФЗ.

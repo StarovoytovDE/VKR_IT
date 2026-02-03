@@ -31,17 +31,15 @@ public sealed class EfCoreDeviceParamsReader : IDeviceParamsReader
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
 
         // Device содержит два FK на vt: MainVtId и ReserveVtId, поэтому можно одним запросом подтянуть оба ТН.
+        // Также подтягиваем CtPlace через device.ct_place_id.
         var device = await db.Devices
             .AsNoTracking()
             .Include(x => x.MainVt)
             .Include(x => x.ReserveVt)
+            .Include(x => x.CtPlace)
             .SingleAsync(x => x.DeviceId == deviceId, ct);
 
-        var ctPlace = await db.CtPlaces
-            .AsNoTracking()
-            .Where(x => x.DeviceId == deviceId)
-            .OrderByDescending(x => x.CtPlaceId)
-            .FirstOrDefaultAsync(ct);
+        var ctPlace = device.CtPlace;
 
         // Наличие функций определяется наличием записей в таблицах функций.
         var dfz = await db.Dfzs

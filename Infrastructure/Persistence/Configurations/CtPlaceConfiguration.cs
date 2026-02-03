@@ -9,6 +9,7 @@ namespace Infrastructure.Persistence.Configurations;
 /// </summary>
 public sealed class CtPlaceConfiguration : IEntityTypeConfiguration<CtPlace>
 {
+    /// <inheritdoc />
     public void Configure(EntityTypeBuilder<CtPlace> builder)
     {
         builder.ToTable("ct_place");
@@ -18,10 +19,6 @@ public sealed class CtPlaceConfiguration : IEntityTypeConfiguration<CtPlace>
         builder.Property(x => x.CtPlaceId)
             .HasColumnName("ct_place_id")
             .UseIdentityByDefaultColumn();
-
-        builder.Property(x => x.DeviceId)
-            .HasColumnName("device_id")
-            .IsRequired();
 
         builder.Property(x => x.Name)
             .HasColumnName("name")
@@ -35,11 +32,8 @@ public sealed class CtPlaceConfiguration : IEntityTypeConfiguration<CtPlace>
             .HasColumnName("place_code")
             .IsRequired();
 
-        builder.HasIndex(x => x.DeviceId)
+        // Рекомендуемо: PlaceCode как логически уникальный справочник.
+        builder.HasIndex(x => x.PlaceCode)
             .IsUnique();
-
-        builder.HasOne(x => x.Device)
-            .WithMany(d => d.CtPlaces)
-            .HasForeignKey(x => x.DeviceId);
     }
 }
