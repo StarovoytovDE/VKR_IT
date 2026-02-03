@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,19 +16,22 @@ using System.Threading.Tasks;
 internal static class Program
 {
     /// <summary>
-    /// Точка входа консольного приложения для пакетной генерации указаний.
-    /// Сценарий:
-    /// 1) Запросить у пользователя ПС (dispatch_name из таблицы substation).
-    /// 2) Запросить действие (4 варианта).
-    /// 3) Найти все устройства device, относящиеся к данной ПС через связь:
-    ///    device.line_end_id -> line_end.substation_id.
-    /// 4) Для каждого device сформировать и вывести операции.
-    /// 5) В конце ожидать нажатия клавиши, очистить консоль и повторить.
+    /// Точка входа консольного приложения.
+    /// Сценарий работы:
+    /// 1) Выбор линии из БД (object.dispatch_name).
+    /// 2) Выбор ПС по концам линии (line_end -> substation).
+    /// 3) Выбор действия (ActionCode).
+    /// 4) Вывод указаний по всем устройствам на выбранной ПС выбранной линии.
+    /// После вывода: ожидание клавиши и возврат к выбору линии.
+    ///
+    /// Важно: DbContext создаётся через фабрику как НОВЫЙ экземпляр на каждую операцию.
+    /// Это предотвращает ObjectDisposedException, возникающий при повторном использовании уже disposed-контекста.
     /// </summary>
     private static async Task Main()
     {
-        // Важно: строка подключения оставлена как в текущем ConsoleTest.
-        // При необходимости вынеси в конфиг/ENV, но по задаче это не требуется.
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+        // Подключение к БД — оставлено как в текущем ConsoleTest (при необходимости вынеси в конфиг).
         var connectionString =
             "Host=localhost;Port=5432;Database=vkr_it;Username=vkr_it_app;Password=VKRitAPP12345671";
 
@@ -36,17 +40,110 @@ internal static class Program
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        // Фабрика нужна для корректного чтения snapshot (EfCoreDeviceParamsReader создаёт новый DbContext на вызов).
-        IDbContextFactory<VkrItDbContext> dbFactory = new PooledDbContextFactory<VkrItDbContext>(options);
+        IDbContextFactory<VkrItDbContext> dbFactory = new NewDbContextFactory(options);
 
-        // DbContext для выборок (список устройств/сторона линии). Используем один на итерацию цикла.
-        await using var db = new VkrItDbContext(options);
-
-        // ===== Инициализация пайплайна генерации (один раз на процесс) =====
-
+        // Reader для снимков устройства (DeviceParamsSnapshot).
         var reader = new EfCoreDeviceParamsReader(dbFactory);
-        var criteriaBuilder = new LineOperationCriteriaBuilder();
 
+        // Пайплайн генерации.
+        var criteriaBuilder = new LineOperationCriteriaBuilder();
+        var generator = BuildGenerator();
+
+        while (true)
+        {
+            Console.Clear();
+
+            // 1) Выбор линии
+            var line = await SelectLineAsync(dbFactory);
+            if (line is null)
+            {
+                Console.WriteLine("Линии в таблице object не найдены.");
+                Console.WriteLine("Нажмите любую клавишу для выхода...");
+                Console.ReadKey(true);
+                return;
+            }
+
+            Console.Clear();
+
+            // 2) Выбор ПС (из line_end по выбранной линии)
+            var lineEnds = await GetLineEndsAsync(dbFactory, line.ObjectId);
+            if (lineEnds.Count == 0)
+            {
+                Console.WriteLine($"Для линии '{line.DispatchName}' (object_id={line.ObjectId}) не найдены концы line_end.");
+                Console.WriteLine("Нажмите любую клавишу, чтобы вернуться к выбору линии...");
+                Console.ReadKey(true);
+                continue;
+            }
+
+            var chosenEnd = SelectSubstation(line.DispatchName, lineEnds);
+            if (chosenEnd is null)
+                continue;
+
+            Console.Clear();
+
+            // 3) Выбор действия
+            var action = SelectAction(line.DispatchName, chosenEnd.SubstationDispatchName);
+
+            Console.Clear();
+
+            // 4) Генерация по всем устройствам на выбранной ПС данной линии
+            var deviceIds = await GetDeviceIdsByLineEndAsync(dbFactory, chosenEnd.LineEndId);
+
+            Console.WriteLine($"Линия: {line.DispatchName} (object_id={line.ObjectId})");
+            Console.WriteLine($"ПС: {chosenEnd.SubstationDispatchName} (substation_id={chosenEnd.SubstationId}), side={chosenEnd.Side}");
+            Console.WriteLine($"Действие: {GetActionDisplayName(action)}");
+            Console.WriteLine();
+
+            if (deviceIds.Count == 0)
+            {
+                Console.WriteLine("Устройства для выбранной ПС на данной линии не найдены.");
+            }
+            else
+            {
+                foreach (var deviceId in deviceIds)
+                {
+                    Console.WriteLine(new string('=', 90));
+
+                    // Важно: reader сам создаёт DbContext через фабрику и корректно его освобождает.
+                    var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
+
+                    var request = new LineOperationRequest
+                    {
+                        LineCode = line.DispatchName,
+                        Side = chosenEnd.Side,
+                        ActionCode = action,
+                        FunctionStates = new FunctionStatesRequest
+                        {
+                            // В консольном сценарии считаем, что диспетчер «ввёл всё включено».
+                            // (Если позже понадобится ввод галочками — добавим.)
+                            DfzEnabled = true,
+                            DzlEnabled = true,
+                            DzEnabled = true,
+                            OapvEnabled = true,
+                            TapvEnabled = true
+                        }
+                    };
+
+                    var criteria = criteriaBuilder.Build(request, deviceObjectId: (int)deviceId, snapshot);
+                    var instructions = generator.Generate(criteria);
+
+                    Console.WriteLine($"Устройство: id={snapshot.DeviceId}, lineEndId={snapshot.LineEndId}, name='{snapshot.DeviceName}'");
+                    PrintResult(instructions);
+                    Console.WriteLine();
+                }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Нажмите любую клавишу, чтобы вернуться к выбору линии...");
+            Console.ReadKey(true);
+        }
+    }
+
+    /// <summary>
+    /// Создаёт генератор указаний со всеми операциями и реестром ActionCode → операции.
+    /// </summary>
+    private static InstructionGenerator BuildGenerator()
+    {
         var operations = new IOperation[]
         {
             new DfzFieldClosingOperation(),
@@ -71,179 +168,154 @@ internal static class Program
         };
 
         IActionOperationRegistry registry = new ActionOperationRegistry(operations);
-        var generator = new InstructionGenerator(registry);
-
-        // ===== Основной интерактивный цикл =====
-
-        while (true)
-        {
-            Console.WriteLine("Введите ПС");
-            var substationDispatchName = (Console.ReadLine() ?? string.Empty).Trim();
-
-            if (string.IsNullOrWhiteSpace(substationDispatchName))
-            {
-                Console.WriteLine("ПС не введена. Повторите ввод.");
-                Console.WriteLine();
-                continue;
-            }
-
-            var actionCode = ReadActionFromUser();
-            Console.WriteLine();
-
-            var deviceIds = await GetDeviceIdsBySubstationAsync(
-                db,
-                substationDispatchName,
-                maxDevices: int.MaxValue);
-
-            if (deviceIds.Count == 0)
-            {
-                Console.WriteLine($"Устройства не найдены для ПС '{substationDispatchName}'. " +
-                                  "Проверь точное совпадение dispatch_name в таблице substation.");
-                Console.WriteLine();
-                Console.WriteLine("Нажмите любую клавишу для сброса");
-                Console.ReadKey(true);
-                Console.Clear();
-                continue;
-            }
-
-            Console.WriteLine($"ПС: '{substationDispatchName}'");
-            Console.WriteLine($"Действие: {GetActionDisplayName(actionCode)}");
-            Console.WriteLine($"Найдено устройств: {deviceIds.Count}");
-            Console.WriteLine();
-
-            foreach (var deviceId in deviceIds)
-            {
-                Console.WriteLine(new string('=', 90));
-
-                // 1) snapshot
-                var snapshot = await reader.ReadAsync(deviceId, CancellationToken.None);
-
-                // 2) определить сторону A/B по LineEnd.SideCode (если определить не удалось — A)
-                var side = await ResolveSideOfLineAsync(db, snapshot.LineEndId);
-
-                Console.WriteLine($"Device: id={snapshot.DeviceId}, lineEndId={snapshot.LineEndId}, name='{snapshot.DeviceName}', side={side}");
-                Console.WriteLine();
-
-                // 3) request (то, что задаёт диспетчер)
-                var request = new LineOperationRequest
-                {
-                    // Пока остаётся тестовый код линии (как в текущей реализации ConsoleTest).
-                    // Если нужно — можем позже подтянуть LineCode из БД через line_end -> object.
-                    LineCode = "VL-500-01",
-                    Side = side,
-                    ActionCode = actionCode,
-                    FunctionStates = new FunctionStatesRequest
-                    {
-                        // В консольном сценарии без чекбоксов считаем, что функции "разрешены" к обработке.
-                        DfzEnabled = true,
-                        DzlEnabled = true,
-                        DzEnabled = true,
-                        OapvEnabled = true,
-                        TapvEnabled = true
-                    }
-                };
-
-                // 4) criteria
-                var criteria = criteriaBuilder.Build(request, deviceObjectId: (int)deviceId, snapshot);
-
-                // 5) generate
-                var instructions = generator.Generate(criteria);
-
-                // 6) print
-                PrintResult(instructions);
-                Console.WriteLine();
-            }
-
-            Console.WriteLine("Нажмите любую клавишу для сброса");
-            Console.ReadKey(true);
-            Console.Clear();
-        }
+        return new InstructionGenerator(registry);
     }
 
     /// <summary>
-    /// Читает выбранное действие от пользователя и возвращает соответствующий ActionCode.
+    /// Предлагает выбрать линию из таблицы object (поле dispatch_name).
     /// </summary>
-    private static ActionCode ReadActionFromUser()
+    private static async Task<LineItem?> SelectLineAsync(IDbContextFactory<VkrItDbContext> dbFactory)
     {
-        while (true)
-        {
-            Console.WriteLine("Выбирите действие:");
-            Console.WriteLine("1 - Вывод ВЛ с замыканием поля");
-            Console.WriteLine("2 - Вывод ВЛ без замыкания поля");
-            Console.WriteLine("3 - Односторонний вывод ВЛ");
+        Console.WriteLine("Выберите линию:");
 
-            var raw = (Console.ReadLine() ?? string.Empty).Trim();
+        await using var db = dbFactory.CreateDbContext();
 
-            if (raw == "1") return ActionCode.LineWithdrawalWithFieldClosing;
-            if (raw == "2") return ActionCode.LineWithdrawalWithoutFieldClosing;
-            if (raw == "3") return ActionCode.LineSingleSideWithdrawal;
-
-            Console.WriteLine("Некорректный выбор. Введите число 1..4.");
-            Console.WriteLine();
-        }
-    }
-
-    /// <summary>
-    /// Возвращает человекочитаемое имя действия для вывода в консоль.
-    /// </summary>
-    private static string GetActionDisplayName(ActionCode action)
-    {
-        return action switch
-        {
-            ActionCode.LineWithdrawalWithFieldClosing => "Вывод ВЛ с замыканием поля",
-            ActionCode.LineWithdrawalWithoutFieldClosing => "Вывод ВЛ без замыкания поля",
-            ActionCode.LineSingleSideWithdrawal => "Односторонний вывод ВЛ",
-            _ => action.ToString()
-        };
-    }
-
-    /// <summary>
-    /// Возвращает идентификаторы устройств, относящихся к подстанции (по dispatch_name).
-    /// Связь: device.line_end_id -> line_end.substation_id.
-    /// </summary>
-    private static async Task<IReadOnlyList<long>> GetDeviceIdsBySubstationAsync(
-        VkrItDbContext db,
-        string substationDispatchName,
-        int maxDevices)
-    {
-        var substationId = await db.Substations
+        var lines = await db.Objects
             .AsNoTracking()
-            .Where(s => s.DispatchName == substationDispatchName)
-            .Select(s => s.SubstationId)
-            .FirstOrDefaultAsync();
-
-        if (substationId == 0)
-            return Array.Empty<long>();
-
-        // join Devices -> LineEnds, фильтр по SubstationId
-        var ids = await db.Devices
-            .AsNoTracking()
-            .Join(
-                db.LineEnds.AsNoTracking(),
-                d => d.LineEndId,
-                le => le.LineEndId,
-                (d, le) => new { d.DeviceId, le.SubstationId })
-            .Where(x => x.SubstationId == substationId)
-            .OrderBy(x => x.DeviceId)
-            .Select(x => x.DeviceId)
-            .Take(maxDevices)
+            .OrderBy(x => x.DispatchName)
+            .Select(x => new LineItem(x.ObjectId, x.DispatchName))
             .ToListAsync();
 
-        return ids;
+        if (lines.Count == 0)
+            return null;
+
+        for (var i = 0; i < lines.Count; i++)
+            Console.WriteLine($"{i + 1}) {lines[i].DispatchName}");
+
+        var index = ReadMenuIndex(lines.Count);
+        return lines[index];
     }
 
     /// <summary>
-    /// Определяет сторону линии (A/B) по LineEnd.SideCode.
-    /// Если определить не удалось — возвращает A.
+    /// Возвращает концы линии (line_end) с подстанциями (substation) для выбранной линии (object_id).
     /// </summary>
-    private static async Task<SideOfLine> ResolveSideOfLineAsync(VkrItDbContext db, long lineEndId)
+    private static async Task<IReadOnlyList<LineEndItem>> GetLineEndsAsync(
+        IDbContextFactory<VkrItDbContext> dbFactory,
+        long lineObjectId)
     {
-        var sideCode = await db.LineEnds
-            .AsNoTracking()
-            .Where(x => x.LineEndId == lineEndId)
-            .Select(x => x.SideCode)
-            .FirstOrDefaultAsync();
+        await using var db = dbFactory.CreateDbContext();
 
+        // Берём line_end по object_id, подтягиваем substation, сортируем по side_code (A/B/...) для стабильного вывода.
+        var ends = await db.LineEnds
+            .AsNoTracking()
+            .Where(x => x.ObjectId == lineObjectId)
+            .Include(x => x.Substation)
+            .OrderBy(x => x.SideCode)
+            .Select(x => new
+            {
+                x.LineEndId,
+                x.SubstationId,
+                SubstationName = x.Substation.DispatchName,
+                x.SideCode
+            })
+            .ToListAsync();
+
+        // Маппинг side_code -> SideOfLine (A/B). Если в БД что-то отличное — считаем A по умолчанию.
+        return ends
+            .Select(x => new LineEndItem(
+                LineEndId: x.LineEndId,
+                SubstationId: x.SubstationId,
+                SubstationDispatchName: x.SubstationName,
+                Side: MapSide(x.SideCode)))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Выводит список ПС для выбранной линии и возвращает выбранный конец линии (line_end).
+    /// </summary>
+    private static LineEndItem? SelectSubstation(string lineName, IReadOnlyList<LineEndItem> lineEnds)
+    {
+        Console.WriteLine($"Линия: {lineName}");
+        Console.WriteLine();
+        Console.WriteLine("Выберите ПС:");
+
+        // На всякий случай: если в line_end несколько записей на одну ПС, показываем их как отдельные варианты (по LineEndId/side).
+        for (var i = 0; i < lineEnds.Count; i++)
+        {
+            var e = lineEnds[i];
+            Console.WriteLine($"{i + 1}) {e.SubstationDispatchName} (side={e.Side}, line_end_id={e.LineEndId})");
+        }
+
+        var index = ReadMenuIndex(lineEnds.Count);
+        return lineEnds[index];
+    }
+
+    /// <summary>
+    /// Выводит меню действий и возвращает выбранный ActionCode.
+    /// </summary>
+    private static ActionCode SelectAction(string lineName, string substationName)
+    {
+        Console.WriteLine($"Линия: {lineName}");
+        Console.WriteLine($"ПС: {substationName}");
+        Console.WriteLine();
+        Console.WriteLine("Выберите действие:");
+
+        var actions = new[]
+        {
+            ActionCode.LineWithdrawalWithFieldClosing,
+            ActionCode.LineWithdrawalWithoutFieldClosing,
+            ActionCode.LineSingleSideWithdrawal
+        };
+
+        for (var i = 0; i < actions.Length; i++)
+            Console.WriteLine($"{i + 1}) {GetActionDisplayName(actions[i])}");
+
+        var index = ReadMenuIndex(actions.Length);
+        return actions[index];
+    }
+
+    /// <summary>
+    /// Возвращает список device_id устройств, относящихся к выбранному концу линии (line_end_id).
+    /// </summary>
+    private static async Task<IReadOnlyList<long>> GetDeviceIdsByLineEndAsync(
+        IDbContextFactory<VkrItDbContext> dbFactory,
+        long lineEndId)
+    {
+        await using var db = dbFactory.CreateDbContext();
+
+        return await db.Devices
+            .AsNoTracking()
+            .Where(d => d.LineEndId == lineEndId)
+            .OrderBy(d => d.DeviceId)
+            .Select(d => d.DeviceId)
+            .ToListAsync();
+    }
+
+    /// <summary>
+    /// Читает номер пункта меню (1..max) и возвращает индекс (0..max-1).
+    /// </summary>
+    private static int ReadMenuIndex(int max)
+    {
+        while (true)
+        {
+            Console.Write("Введите номер: ");
+            var raw = Console.ReadLine();
+
+            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) &&
+                n >= 1 && n <= max)
+            {
+                return n - 1;
+            }
+
+            Console.WriteLine($"Некорректный ввод. Ожидается число от 1 до {max}.");
+        }
+    }
+
+    /// <summary>
+    /// Маппит строковый side_code (из line_end) в SideOfLine.
+    /// </summary>
+    private static SideOfLine MapSide(string? sideCode)
+    {
         if (string.Equals(sideCode, "B", StringComparison.OrdinalIgnoreCase))
             return SideOfLine.B;
 
@@ -251,18 +323,69 @@ internal static class Program
     }
 
     /// <summary>
-    /// Печатает список сформированных указаний в консоль.
+    /// Возвращает человекочитаемое название действия (ActionCode) для вывода в консоль.
+    /// </summary>
+    private static string GetActionDisplayName(ActionCode code)
+    {
+        return code switch
+        {
+            ActionCode.LineWithdrawalWithFieldClosing => "Вывод ВЛ с замыканием поля",
+            ActionCode.LineWithdrawalWithoutFieldClosing => "Вывод ВЛ без замыкания поля",
+            ActionCode.LineSingleSideWithdrawal => "Односторонний вывод ВЛ",
+            _ => code.ToString()
+        };
+    }
+
+    /// <summary>
+    /// Печатает сгенерированные указания (пропуская пустые строки).
     /// </summary>
     private static void PrintResult(IReadOnlyList<string> instructions)
     {
-        if (instructions.Count == 0)
+        if (instructions is null || instructions.Count == 0)
         {
-            Console.WriteLine("Результат: операций не требуется");
+            Console.WriteLine("(нет указаний)");
             return;
         }
 
-        Console.WriteLine("Результат:");
-        foreach (var instruction in instructions)
-            Console.WriteLine($" - {instruction}");
+        foreach (var s in instructions)
+        {
+            if (!string.IsNullOrWhiteSpace(s))
+                Console.WriteLine($"- {s}");
+        }
     }
+
+    /// <summary>
+    /// Фабрика DbContext, создающая НОВЫЙ экземпляр VkrItDbContext при каждом вызове CreateDbContext().
+    /// Нужна, чтобы исключить повторное использование уже disposed-контекста.
+    /// </summary>
+    private sealed class NewDbContextFactory : IDbContextFactory<VkrItDbContext>
+    {
+        private readonly DbContextOptions<VkrItDbContext> _options;
+
+        /// <summary>
+        /// Создаёт фабрику контекста на основе заранее подготовленных DbContextOptions.
+        /// </summary>
+        public NewDbContextFactory(DbContextOptions<VkrItDbContext> options)
+        {
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+        }
+
+        /// <summary>
+        /// Создаёт новый экземпляр VkrItDbContext.
+        /// </summary>
+        public VkrItDbContext CreateDbContext()
+        {
+            return new VkrItDbContext(_options);
+        }
+    }
+
+    /// <summary>
+    /// Элемент списка линий (object).
+    /// </summary>
+    private sealed record LineItem(long ObjectId, string DispatchName);
+
+    /// <summary>
+    /// Элемент выбора ПС на линии (line_end + substation + side).
+    /// </summary>
+    private sealed record LineEndItem(long LineEndId, long SubstationId, string SubstationDispatchName, SideOfLine Side);
 }
